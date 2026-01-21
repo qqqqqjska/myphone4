@@ -1251,8 +1251,8 @@ textarea {
     align-items: center;
     padding-left: 10px;
     padding-right: 10px;
-    background-color: #f2f2f7; /* 与底栏一致 */
-    border-bottom: 1px solid rgba(0,0,0,0.1);
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #d1d1d6;
     position: relative;
 }
 
@@ -1281,12 +1281,12 @@ textarea {
 /* iMessage Style Input Area */
 .chat-input-area {
     min-height: 50px;
-    background-color: #f2f2f7; /* iMessage 风格背景 */
+    background-color: #f9f9f9;
     border-top: 1px solid #d1d1d6;
     display: flex;
     align-items: center;
     padding: 8px 12px;
-    gap: 10px;
+    gap: 12px;
     z-index: 10;
     position: relative;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -1295,19 +1295,20 @@ textarea {
 #chat-input {
     flex: 1;
     height: 36px;
-    border: 1px solid #d1d1d6;
-    border-radius: 18px; /* 更圆润 */
+    border: 1px solid #e5e5e5;
+    border-radius: 20px;
     padding: 0 15px;
     background-color: #fff;
     font-size: 16px;
     z-index: 10;
     position: relative;
+    min-width: 0; /* 防止 flex 子项溢出 */
 }
 
 #send-msg-btn, #trigger-ai-reply-btn {
     background: none;
     border: none;
-    color: var(--imessage-blue); /* iMessage 蓝 */
+    color: var(--imessage-blue);
     font-size: 24px;
     cursor: pointer;
     display: flex;
@@ -1317,6 +1318,7 @@ textarea {
     height: 32px;
     border-radius: 50%;
     transition: background-color 0.2s;
+    flex-shrink: 0;
 }
 
 #trigger-ai-reply-btn:active {
@@ -1326,13 +1328,19 @@ textarea {
 .chat-icon-btn {
     background: none;
     border: none;
-    font-size: 24px;
-    color: #8e8e93; /* 灰色图标 */
-    padding: 0 5px;
+    font-size: 26px;
+    color: #858585;
+    padding: 0;
     cursor: pointer;
     transition: color 0.2s;
     z-index: 20;
     position: relative;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #trigger-ai-reply-btn {
