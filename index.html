@@ -1247,20 +1247,23 @@
             <div class="app-body" style="display: flex; flex-direction: column; gap: 20px; padding: 20px;">
                 
                 <!-- 1. 顶部：聊天预览 -->
-                <div style="display: flex; justify-content: center;">
-                    <div id="chat-preview-container" style="width: 300px; height: 650px; border: 12px solid #333; border-radius: 40px; position: relative; overflow: hidden; background-color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
-                        <!-- 模拟状态栏 -->
-                        <div class="status-bar" style="position: absolute; top: 0; width: 100%; z-index: 10;">
-                            <div class="time">9:41</div>
-                            <div class="status-icons">
-                                <i class="fas fa-signal"></i>
-                                <i class="fas fa-wifi"></i>
-                                <i class="fas fa-battery-full"></i>
+                <div style="display: flex; justify-content: center; overflow: hidden; padding: 20px;">
+                    <!-- 预览容器外壳，用于居中和裁剪 -->
+                    <div style="width: 375px; height: 600px; position: relative; display: flex; justify-content: center; align-items: flex-start;">
+                        <!-- 实际预览容器，应用缩放 -->
+                        <div id="chat-preview-container" style="width: 375px; height: 812px; position: absolute; top: 0; transform: scale(0.7); transform-origin: top center; background-color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden;">
+                            <!-- 模拟状态栏 -->
+                            <div class="status-bar" style="position: absolute; top: 0; width: 100%; z-index: 10;">
+                                <div class="time">9:41</div>
+                                <div class="status-icons">
+                                    <i class="fas fa-signal"></i>
+                                    <i class="fas fa-wifi"></i>
+                                    <i class="fas fa-battery-full"></i>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- 顶栏 (复用 chat-header 类) -->
-                        <div id="preview-top-bar" class="chat-header" style="position: absolute; top: 0; width: 100%; box-sizing: border-box;">
+                            <!-- 顶栏 (复用 chat-header 类) -->
+                            <div id="preview-top-bar" class="chat-header" style="position: absolute; top: 0; width: 100%; box-sizing: border-box;">
                             <button id="preview-back-btn" class="back-btn"><i class="fas fa-chevron-left"></i></button>
                             <span id="preview-title" style="position: absolute; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 600;">用户名</span>
                             <button id="preview-menu-btn" class="wechat-icon-btn"><i class="fas fa-ellipsis-h"></i></button>
