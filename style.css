@@ -1722,12 +1722,15 @@ textarea {
 .message-content.transfer-msg {
     padding: 0;
     background-color: #ffffff;
-    width: 230px;
+    width: 240px !important;
+    height: 80px !important;
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 12px !important;
     cursor: pointer;
     border: 1px solid #e5e5ea;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
 }
 
 /* 修复用户转账卡片颜色被蓝色覆盖的问题 */
@@ -1739,7 +1742,7 @@ textarea {
 .message-content.transfer-msg.accepted,
 .message-content.transfer-msg.returned {
     background-color: #ffffff;
-    opacity: 0.8;
+    opacity: 1;
 }
 
 /* 修复用户转账卡片状态颜色 */
@@ -1752,25 +1755,34 @@ textarea {
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: 100%;
+    justify-content: center;
 }
 
 .transfer-top {
     display: flex;
     align-items: center;
-    padding: 15px;
+    padding: 0 15px;
     gap: 15px;
+    height: 100%;
 }
 
 .transfer-icon {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     background-color: #000; /* 黑色背景 */
     display: flex;
     justify-content: center;
     align-items: center;
     color: #fff; /* 白色图标 */
-    font-size: 20px;
+    font-size: 22px;
+    margin-top: 0 !important;
+    flex-shrink: 0;
+}
+.message-content.transfer-msg:not(.accepted) .transfer-icon i {
+    transform: translate(-11px, -6px);
+    display: inline-block;
 }
 
 .message-content.transfer-msg.accepted .transfer-icon,
@@ -1783,15 +1795,19 @@ textarea {
     flex-direction: column;
     color: #000; /* 黑色文字 */
     flex: 1;
+    margin-top: 0 !important;
+    justify-content: center;
 }
 
 .transfer-amount {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
+    margin-top: 0 !important;
+    line-height: 1.2;
 }
 
 .transfer-remark {
-    font-size: 12px;
+    font-size: 13px;
     color: #8e8e93; /* 灰色备注 */
     margin-top: 2px;
     white-space: nowrap;
@@ -1800,13 +1816,7 @@ textarea {
 }
 
 .transfer-bottom {
-    background-color: #f2f2f7; /* 浅灰底色 */
-    padding: 6px 15px;
-    font-size: 11px;
-    color: #8e8e93;
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid #f2f2f7;
+    display: none !important;
 }
 
 /* Worldbook Styles */

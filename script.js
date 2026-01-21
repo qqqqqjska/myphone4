@@ -1180,9 +1180,53 @@ document.addEventListener('DOMContentLoaded', () => {
             // 转账卡片
             { id: 'ctrl-transfer-bg', target: 'preview-transfer-card', prop: 'backgroundColor', type: 'color' },
             { id: 'ctrl-transfer-text', target: 'preview-transfer-card', prop: 'color', type: 'color' },
-            { id: 'ctrl-transfer-radius', target: 'preview-transfer-card', prop: 'borderRadius', type: 'px' },
+            // 支持四个角分别设置
+            { id: 'ctrl-transfer-radius-tl', target: 'preview-transfer-card', prop: 'borderTopLeftRadius', type: 'px', displayId: 'val-transfer-radius-tl' },
+            { id: 'ctrl-transfer-radius-tr', target: 'preview-transfer-card', prop: 'borderTopRightRadius', type: 'px', displayId: 'val-transfer-radius-tr' },
+            { id: 'ctrl-transfer-radius-br', target: 'preview-transfer-card', prop: 'borderBottomRightRadius', type: 'px', displayId: 'val-transfer-radius-br' },
+            { id: 'ctrl-transfer-radius-bl', target: 'preview-transfer-card', prop: 'borderBottomLeftRadius', type: 'px', displayId: 'val-transfer-radius-bl' },
+            // 兼容单一圆角设置（老控件）
+            { id: 'ctrl-transfer-radius', target: 'preview-transfer-card', prop: 'borderRadius', type: 'px', displayId: 'val-transfer-radius' },
             { id: 'ctrl-transfer-icon-bg', target: 'preview-transfer-icon', prop: 'backgroundColor', type: 'color' },
-            { id: 'ctrl-transfer-icon-color', target: 'preview-transfer-icon', prop: 'color', type: 'color' }
+            { id: 'ctrl-transfer-icon-color', target: 'preview-transfer-icon', prop: 'color', type: 'color' },
+            { id: 'ctrl-transfer-width', target: 'preview-transfer-card', prop: 'width', type: 'px', displayId: 'val-transfer-width' },
+            { id: 'ctrl-transfer-height', target: 'preview-transfer-card', prop: 'height', type: 'px', displayId: 'val-transfer-height' },
+            { id: 'ctrl-transfer-icon-url', target: 'preview-transfer-icon', type: 'icon' },
+            // 图标位置与大小
+            { id: 'ctrl-transfer-icon-x', target: 'preview-transfer-icon', type: 'transform-x', pair: 'ctrl-transfer-icon-y', displayId: 'val-transfer-icon-x' },
+            { id: 'ctrl-transfer-icon-y', target: 'preview-transfer-icon', type: 'transform-y', pair: 'ctrl-transfer-icon-x', displayId: 'val-transfer-icon-y' },
+            { id: 'ctrl-transfer-icon-inner-x', target: 'preview-transfer-icon-inner', type: 'transform-x', pair: 'ctrl-transfer-icon-inner-y', displayId: 'val-transfer-icon-inner-x' },
+            { id: 'ctrl-transfer-icon-inner-y', target: 'preview-transfer-icon-inner', type: 'transform-y', pair: 'ctrl-transfer-icon-inner-x', displayId: 'val-transfer-icon-inner-y' },
+            { id: 'ctrl-transfer-icon-size', target: 'preview-transfer-icon', prop: 'fontSize', type: 'px', displayId: 'val-transfer-icon-size' },
+            { id: 'ctrl-transfer-amount-x', target: 'preview-transfer-amount', type: 'transform-x', pair: 'ctrl-transfer-amount-y', displayId: 'val-transfer-amount-x' },
+            { id: 'ctrl-transfer-amount-y', target: 'preview-transfer-amount', type: 'transform-y', pair: 'ctrl-transfer-amount-x', displayId: 'val-transfer-amount-y' },
+            { id: 'ctrl-transfer-remark-x', target: 'preview-transfer-remark', type: 'transform-x', pair: 'ctrl-transfer-remark-y', displayId: 'val-transfer-remark-x' },
+            { id: 'ctrl-transfer-remark-y', target: 'preview-transfer-remark', type: 'transform-y', pair: 'ctrl-transfer-remark-x', displayId: 'val-transfer-remark-y' },
+            { id: 'ctrl-transfer-remark-text', target: 'preview-transfer-remark', type: 'text' },
+            
+            // 已收款 - 转账卡片 控件（后缀 -accepted）
+            { id: 'ctrl-transfer-bg-accepted', target: 'preview-transfer-card-accepted', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-transfer-text-accepted', target: 'preview-transfer-card-accepted', prop: 'color', type: 'color' },
+            { id: 'ctrl-transfer-radius-tl-accepted', target: 'preview-transfer-card-accepted', prop: 'borderTopLeftRadius', type: 'px', displayId: 'val-transfer-radius-tl-accepted' },
+            { id: 'ctrl-transfer-radius-tr-accepted', target: 'preview-transfer-card-accepted', prop: 'borderTopRightRadius', type: 'px', displayId: 'val-transfer-radius-tr-accepted' },
+            { id: 'ctrl-transfer-radius-br-accepted', target: 'preview-transfer-card-accepted', prop: 'borderBottomRightRadius', type: 'px', displayId: 'val-transfer-radius-br-accepted' },
+            { id: 'ctrl-transfer-radius-bl-accepted', target: 'preview-transfer-card-accepted', prop: 'borderBottomLeftRadius', type: 'px', displayId: 'val-transfer-radius-bl-accepted' },
+            { id: 'ctrl-transfer-radius-accepted', target: 'preview-transfer-card-accepted', prop: 'borderRadius', type: 'px', displayId: 'val-transfer-radius-accepted' },
+            { id: 'ctrl-transfer-icon-bg-accepted', target: 'preview-transfer-icon-accepted', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-transfer-icon-color-accepted', target: 'preview-transfer-icon-accepted', prop: 'color', type: 'color' },
+            { id: 'ctrl-transfer-width-accepted', target: 'preview-transfer-card-accepted', prop: 'width', type: 'px', displayId: 'val-transfer-width-accepted' },
+            { id: 'ctrl-transfer-height-accepted', target: 'preview-transfer-card-accepted', prop: 'height', type: 'px', displayId: 'val-transfer-height-accepted' },
+            { id: 'ctrl-transfer-icon-url-accepted', target: 'preview-transfer-icon-accepted', type: 'icon' },
+            { id: 'ctrl-transfer-icon-x-accepted', target: 'preview-transfer-icon-accepted', type: 'transform-x', pair: 'ctrl-transfer-icon-y-accepted', displayId: 'val-transfer-icon-x-accepted' },
+            { id: 'ctrl-transfer-icon-y-accepted', target: 'preview-transfer-icon-accepted', type: 'transform-y', pair: 'ctrl-transfer-icon-x-accepted', displayId: 'val-transfer-icon-y-accepted' },
+            { id: 'ctrl-transfer-icon-inner-x-accepted', target: 'preview-transfer-icon-inner-accepted', type: 'transform-x', pair: 'ctrl-transfer-icon-inner-y-accepted', displayId: 'val-transfer-icon-inner-x-accepted' },
+            { id: 'ctrl-transfer-icon-inner-y-accepted', target: 'preview-transfer-icon-inner-accepted', type: 'transform-y', pair: 'ctrl-transfer-icon-inner-x-accepted', displayId: 'val-transfer-icon-inner-y-accepted' },
+            { id: 'ctrl-transfer-icon-size-accepted', target: 'preview-transfer-icon-accepted', prop: 'fontSize', type: 'px', displayId: 'val-transfer-icon-size-accepted' },
+            { id: 'ctrl-transfer-amount-x-accepted', target: 'preview-transfer-amount-accepted', type: 'transform-x', pair: 'ctrl-transfer-amount-y-accepted', displayId: 'val-transfer-amount-x-accepted' },
+            { id: 'ctrl-transfer-amount-y-accepted', target: 'preview-transfer-amount-accepted', type: 'transform-y', pair: 'ctrl-transfer-amount-x-accepted', displayId: 'val-transfer-amount-y-accepted' },
+            { id: 'ctrl-transfer-remark-x-accepted', target: 'preview-transfer-remark-accepted', type: 'transform-x', pair: 'ctrl-transfer-remark-y-accepted', displayId: 'val-transfer-remark-x-accepted' },
+            { id: 'ctrl-transfer-remark-y-accepted', target: 'preview-transfer-remark-accepted', type: 'transform-y', pair: 'ctrl-transfer-remark-x-accepted', displayId: 'val-transfer-remark-y-accepted' },
+            { id: 'ctrl-transfer-remark-text-accepted', target: 'preview-transfer-remark-accepted', type: 'text' },
         ];
 
         controls.forEach(ctrl => {
@@ -1207,6 +1251,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 生成 CSS
                 generateCSS(controls);
             });
+
+            // 初始化预览状态
+            if (newInput.value) {
+                updatePreview(ctrl, newInput.value);
+            }
         });
 
         // 复制 CSS 按钮
@@ -1270,6 +1319,53 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // 重置消息样式按钮
+        const resetMsgStyleBtn = document.getElementById('reset-msg-style-btn');
+        if (resetMsgStyleBtn) {
+            const newBtn = resetMsgStyleBtn.cloneNode(true);
+            resetMsgStyleBtn.parentNode.replaceChild(newBtn, resetMsgStyleBtn);
+            newBtn.addEventListener('click', () => {
+                const msgControls = controls.filter(c => c.id.includes('ctrl-ai-') || c.id.includes('ctrl-user-'));
+                
+                msgControls.forEach(c => {
+                    const input = document.getElementById(c.id);
+                    if (input) {
+                        // 重置为默认值
+                        if (c.type === 'color') {
+                            if (c.id === 'ctrl-ai-bg-color') input.value = '#E5E5EA';
+                            else if (c.id === 'ctrl-ai-text-color') input.value = '#000000';
+                            else if (c.id === 'ctrl-user-bg-color') input.value = '#007AFF';
+                            else if (c.id === 'ctrl-user-text-color') input.value = '#FFFFFF';
+                            else input.value = '#000000';
+                        } else if (c.type === 'px') {
+                            if (c.prop.includes('Radius')) input.value = 18;
+                            else if (c.prop.includes('padding')) {
+                                if (c.prop.endsWith('Top') || c.prop.endsWith('Bottom')) input.value = 8;
+                                else input.value = 12;
+                            }
+                            else if (c.prop === 'marginBottom') input.value = 10;
+                            else input.value = 0;
+                        } else if (c.type.includes('transform')) {
+                            input.value = 0;
+                        } else if (c.type.includes('shadow')) {
+                            if (c.type === 'shadow-blur') input.value = 0;
+                            else input.value = '#000000';
+                        } else if (c.type.includes('bg-size')) {
+                            input.value = 100;
+                        } else if (c.type.includes('bg-pos')) {
+                            input.value = 50;
+                        } else {
+                            input.value = '';
+                        }
+                        
+                        // 触发 input 事件以更新预览
+                        input.dispatchEvent(new Event('input'));
+                    }
+                });
+                alert('已重置消息样式');
+            });
+        }
+
         // 导航栏切换逻辑
         const navItems = document.querySelectorAll('#customize-nav .nav-item');
         const sections = document.querySelectorAll('.customize-section');
@@ -1300,48 +1396,124 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // 转账卡片子导航切换
+        const transferSubNavItems = document.querySelectorAll('#transfer-sub-nav .sub-nav-item');
+        const transferControlsNormal = document.getElementById('transfer-controls-normal');
+        const transferControlsAccepted = document.getElementById('transfer-controls-accepted');
+
+        if (transferSubNavItems.length > 0) {
+            transferSubNavItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    // 移除所有 active
+                    transferSubNavItems.forEach(nav => {
+                        nav.classList.remove('active');
+                        nav.style.fontWeight = 'normal';
+                        nav.style.color = '#666';
+                        nav.style.background = 'transparent';
+                        nav.style.boxShadow = 'none';
+                    });
+
+                    // 激活当前
+                    item.classList.add('active');
+                    item.style.fontWeight = '600';
+                    item.style.color = '#000';
+                    item.style.background = '#fff';
+                    item.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+
+                    const target = item.dataset.target;
+                    if (target === 'normal') {
+                        if (transferControlsNormal) transferControlsNormal.classList.remove('hidden');
+                        if (transferControlsAccepted) transferControlsAccepted.classList.add('hidden');
+                    } else if (target === 'accepted') {
+                        if (transferControlsNormal) transferControlsNormal.classList.add('hidden');
+                        if (transferControlsAccepted) transferControlsAccepted.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
         // 初始化 CSS
         generateCSS(controls);
     }
 
     function updatePreview(ctrl, value) {
-        const target = document.getElementById(ctrl.target);
-        if (!target) return;
+        let targets = [];
+        const primaryTarget = document.getElementById(ctrl.target);
+        if (primaryTarget) targets.push(primaryTarget);
 
-        if (ctrl.type === 'url') {
-            if (value) {
-                target.style[ctrl.prop] = `url('${value}')`;
-                target.style.backgroundSize = 'cover';
-                target.style.backgroundPosition = 'center';
-            } else {
-                target.style[ctrl.prop] = '';
-            }
-        } else if (ctrl.type === 'px') {
-            target.style[ctrl.prop] = `${value}px`;
-            // 如果是顶栏高度变化，需要调整消息区域的 top
-            if (ctrl.id === 'ctrl-top-height') {
-                document.getElementById('preview-messages').style.top = `${value}px`;
-            }
-            // 如果是底栏高度变化，需要调整消息区域的 bottom
-            if (ctrl.id === 'ctrl-bottom-height') {
-                document.getElementById('preview-messages').style.bottom = `${value}px`;
-            }
-        } else if (ctrl.type === '%') {
-            target.style[ctrl.prop] = `${value}%`;
-            if (ctrl.prop === 'width') {
-                target.style.flex = 'none'; // 修复宽度不生效
-            }
-        } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
-            const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
-            const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
-            const x = xInput ? xInput.value : 0;
-            const y = yInput ? yInput.value : 0;
-            
-            let defaultTransform = '';
-            if (ctrl.target === 'preview-title') defaultTransform = 'translateX(-50%)';
-            else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) defaultTransform = 'translateY(-50%)';
-            
-            target.style.transform = `${defaultTransform} translate(${x}px, ${y}px)`;
+        // 扩展目标：根据 ctrl.target 查找同类元素
+        if (ctrl.target === 'preview-ai-bubble') {
+            const others = document.querySelectorAll('#preview-messages .chat-message.other .message-content');
+            others.forEach(el => { if (el !== primaryTarget) targets.push(el); });
+        } else if (ctrl.target === 'preview-user-bubble') {
+            // 排除转账卡片
+            const others = document.querySelectorAll('#preview-messages .chat-message.user .message-content:not(.transfer-msg)');
+            others.forEach(el => { if (el !== primaryTarget) targets.push(el); });
+        } else if (ctrl.target === 'preview-ai-row') {
+            const others = document.querySelectorAll('#preview-messages .chat-message.other');
+            others.forEach(el => { if (el !== primaryTarget) targets.push(el); });
+        } else if (ctrl.target === 'preview-user-row') {
+            const others = document.querySelectorAll('#preview-messages .chat-message.user');
+            others.forEach(el => { if (el !== primaryTarget) targets.push(el); });
+        }
+
+        targets.forEach(target => {
+            const isTransferCtrl = ctrl.target && ctrl.target.startsWith && ctrl.target.startsWith('preview-transfer-');
+            const isAccepted = ctrl.target && ctrl.target.endsWith && ctrl.target.endsWith('-accepted');
+            const baseTarget = isAccepted ? ctrl.target.replace(/-accepted$/, '') : ctrl.target;
+
+            if (ctrl.type === 'url') {
+                if (value) {
+                    target.style[ctrl.prop] = `url('${value}')`;
+                    target.style.backgroundSize = 'cover';
+                    target.style.backgroundPosition = 'center';
+                } else {
+                    target.style[ctrl.prop] = '';
+                }
+            } else if (ctrl.type === 'px') {
+                target.style[ctrl.prop] = `${value}px`;
+                // 如果是转账卡片，父容器 `.message-content.transfer-msg` 也有固定样式（可能含 !important），
+                // 同步设置到父容器以确保预览生效。
+                if (baseTarget === 'preview-transfer-card') {
+                    const parentMsg = target.closest('.message-content.transfer-msg');
+                    if (parentMsg) {
+                        // 将 camelCase 转为 kebab-case 用于 setProperty
+                        const kebab = ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+                        parentMsg.style.setProperty(kebab, `${value}px`, 'important');
+                    }
+                }
+                // 如果是顶栏高度变化，需要调整消息区域的 top
+                if (ctrl.id === 'ctrl-top-height') {
+                    document.getElementById('preview-messages').style.top = `${value}px`;
+                }
+                // 如果是底栏高度变化，需要调整消息区域的 bottom
+                if (ctrl.id === 'ctrl-bottom-height') {
+                    document.getElementById('preview-messages').style.bottom = `${value}px`;
+                }
+            } else if (ctrl.type === '%') {
+                target.style[ctrl.prop] = `${value}%`;
+                if (ctrl.prop === 'width') {
+                    target.style.flex = 'none'; // 修复宽度不生效
+                }
+                // 对于转账相关的百分比宽度，仅设置当前目标预览元素
+                if (isTransferCtrl) {
+                    if (ctrl.prop === 'width') target.style.flex = 'none';
+                }
+            } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
+                const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
+                const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
+                const x = xInput ? xInput.value : 0;
+                const y = yInput ? yInput.value : 0;
+                
+                let defaultTransform = '';
+                if (ctrl.target === 'preview-title') defaultTransform = 'translateX(-50%)';
+                else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) defaultTransform = 'translateY(-50%)';
+                
+                target.style.transform = `${defaultTransform} translate(${x}px, ${y}px)`;
+                // 转账控件：只修改当前目标的 transform（目标通常是已命名的预览节点）
+                if (isTransferCtrl) {
+                    target.style.display = 'inline-block';
+                }
             } else if (ctrl.type === 'icon') {
                 // 按钮内部图标替换
                 if (value) {
@@ -1356,10 +1528,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (ctrl.type === 'color') {
                 target.style[ctrl.prop] = value;
-                // 特殊处理转账文字颜色，需要应用到内部元素
+                // 特殊处理转账文字颜色，需要应用到内部元素（仅影响当前目标）
                 if (ctrl.id === 'ctrl-transfer-text') {
                     const info = target.querySelector('.transfer-info');
                     if (info) info.style.color = value;
+                }
+                // 同步转账卡片背景到父容器，确保覆盖原始样式（仅当前目标）
+                if (baseTarget === 'preview-transfer-card') {
+                    const parentMsg = target.closest('.message-content.transfer-msg');
+                    if (parentMsg) parentMsg.style.setProperty('background-color', value, 'important');
+                }
+                // 对于转账相关颜色，仅修改当前目标元素
+                if (isTransferCtrl) {
+                    target.style[ctrl.prop] = value;
                 }
             } else if (ctrl.type === 'shadow-blur' || ctrl.type === 'shadow-color') {
                 const blurInput = document.getElementById(ctrl.type === 'shadow-blur' ? ctrl.id : ctrl.pair);
@@ -1390,13 +1571,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const y = yInput ? yInput.value : 50;
                 target.style.backgroundPosition = `${x}% ${y}%`;
             }
-        }
+        });
+    }
 
     function generateCSS(controls) {
         let css = '/* 自定义主题 CSS */\n\n';
         const processedTransforms = new Set();
         
+        function getTransferSelector(baseTarget, isAccepted) {
+            const prefix = isAccepted ? '.message-content.transfer-msg.accepted ' : '.message-content.transfer-msg:not(.accepted) ';
+            if (baseTarget === 'preview-transfer-card') return prefix + '.transfer-card';
+            if (baseTarget === 'preview-transfer-icon') return prefix + '.transfer-icon';
+            if (baseTarget === 'preview-transfer-icon-inner') return prefix + '.transfer-icon i';
+            if (baseTarget === 'preview-transfer-desc') return prefix + '.transfer-bottom span';
+            if (baseTarget === 'preview-transfer-bottom') return prefix + '.transfer-bottom';
+            if (baseTarget === 'preview-transfer-amount') return prefix + '.transfer-amount';
+            if (baseTarget === 'preview-transfer-remark') return prefix + '.transfer-remark';
+            return '';
+        }
+
         controls.forEach(ctrl => {
+            const isAccepted = ctrl.target && ctrl.target.endsWith && ctrl.target.endsWith('-accepted');
+            const baseTarget = isAccepted ? ctrl.target.replace(/-accepted$/, '') : ctrl.target;
             const input = document.getElementById(ctrl.id);
             const value = input ? input.value : '';
             
@@ -1432,9 +1628,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (ctrl.target === 'preview-plus-btn') selector = '#chat-more-btn';
                 else if (ctrl.target === 'preview-emoji-btn') selector = '#sticker-btn';
                 else if (ctrl.target === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
+                else if (ctrl.target === 'preview-transfer-icon') selector = '.transfer-icon';
                 
                 if (selector) {
-                    css += `${selector} {\n    font-size: ${value}px;\n}\n\n`;
+                    css += `${selector} {\n    ${ctrl.prop}: ${value}%;\n}\n\n`;
+                    if (ctrl.prop === 'width') css += `${selector} { flex: none; }\n\n`;
+                }
+            } else if (ctrl.type.includes('icon')) {
+                css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
+            } else if (ctrl.type === 'color') {
+                let selector = '';
+                if (baseTarget === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (baseTarget === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                else if (baseTarget && baseTarget.startsWith('preview-transfer-')) selector = getTransferSelector(baseTarget, isAccepted);
+
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};\n}\n\n`;
+                    // 特殊处理转账文字颜色（仅为普通控件 id）
+                    if (ctrl.id === 'ctrl-transfer-text') {
+                        css += `.transfer-info {\n    color: ${value};\n}\n\n`;
+                    }
+                }
+            } else if (ctrl.type === 'text') {
+                // 文本内容修改，不生成CSS，直接修改DOM
+                const target = document.getElementById(ctrl.target);
+                if (target) {
+                    target.textContent = value;
+                }
+            } else if (ctrl.type === 'px' && ctrl.prop.includes('Radius')) {
+                let selector = '';
+                if (baseTarget === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (baseTarget === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                else if (baseTarget === 'preview-transfer-card') selector = getTransferSelector(baseTarget, isAccepted);
+                
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'px' && (ctrl.prop === 'width' || ctrl.prop === 'height')) {
+                let selector = '';
+                if (baseTarget === 'preview-transfer-card') selector = getTransferSelector(baseTarget, isAccepted);
+                else if (baseTarget === 'preview-transfer-bottom') selector = getTransferSelector(baseTarget, isAccepted);
+                
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop}: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'icon') {
+                if (ctrl.id === 'ctrl-transfer-icon-url') {
+                    css += `/* 转账图标替换 - 建议使用 JS 替换或 background-image 覆盖 */\n`;
+                    // 生成已收款/普通两类选择器
+                    const selNormal = getTransferSelector('preview-transfer-icon', false);
+                    const selAccepted = getTransferSelector('preview-transfer-icon', true);
+                    css += `${selNormal} i, ${selAccepted} i { display: none; }\n`;
+                    css += `${selNormal}, ${selAccepted} { background-image: url('${value}'); background-size: contain; background-repeat: no-repeat; background-position: center; }\n\n`;
+                } else {
+                    css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
                 }
             } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
                 if (processedTransforms.has(ctrl.target)) return;
@@ -1448,44 +1695,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (x == 0 && y == 0) return;
                 
                 let selector = '';
-                if (ctrl.target === 'preview-bottom-bar') selector = '.chat-input-area';
-                else if (ctrl.target === 'preview-title') selector = '.chat-header > span';
-                else if (ctrl.target === 'preview-input') selector = '#chat-input';
-                else if (ctrl.target === 'preview-back-btn') selector = '#back-to-contacts';
-                else if (ctrl.target === 'preview-menu-btn') selector = '#chat-settings-btn';
-                else if (ctrl.target === 'preview-plus-btn') selector = '#chat-more-btn';
-                else if (ctrl.target === 'preview-emoji-btn') selector = '#sticker-btn';
-                else if (ctrl.target === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
+                if (baseTarget === 'preview-bottom-bar') selector = '.chat-input-area';
+                else if (baseTarget === 'preview-title') selector = '.chat-header > span';
+                else if (baseTarget === 'preview-input') selector = '#chat-input';
+                else if (baseTarget === 'preview-back-btn') selector = '#back-to-contacts';
+                else if (baseTarget === 'preview-menu-btn') selector = '#chat-settings-btn';
+                else if (baseTarget === 'preview-plus-btn') selector = '#chat-more-btn';
+                else if (baseTarget === 'preview-emoji-btn') selector = '#sticker-btn';
+                else if (baseTarget === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
+                else if (baseTarget === 'preview-transfer-amount') selector = getTransferSelector('preview-transfer-amount', isAccepted);
+                else if (baseTarget === 'preview-transfer-remark') selector = getTransferSelector('preview-transfer-remark', isAccepted);
+                else if (baseTarget === 'preview-transfer-desc') selector = getTransferSelector('preview-transfer-desc', isAccepted);
+                else if (baseTarget === 'preview-transfer-icon') selector = getTransferSelector('preview-transfer-icon', isAccepted);
+                else if (baseTarget === 'preview-transfer-icon-inner') selector = getTransferSelector('preview-transfer-icon-inner', isAccepted);
+                else if (baseTarget === 'preview-transfer-bottom') selector = getTransferSelector('preview-transfer-bottom', isAccepted);
 
                 if (selector) {
                     let transformValue = `translate(${x}px, ${y}px)`;
                     if (ctrl.target === 'preview-title') transformValue = `translateX(-50%) ${transformValue}`;
                     else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) transformValue = `translateY(-50%) ${transformValue}`;
                     
-                    css += `${selector} {\n    transform: ${transformValue};\n}\n\n`;
+                    css += `${selector} {\n    transform: ${transformValue};\n    display: inline-block;\n}\n\n`;
                 }
-            }
-            else if (ctrl.type.includes('icon')) {
-                css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
-            } else if (ctrl.type === 'color') {
+            } else if (ctrl.type === 'px' && ctrl.prop.includes('padding')) {
                 let selector = '';
                 if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
                 else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                else if (ctrl.target === 'preview-transfer-card') selector = '.message-content.transfer-msg';
-                else if (ctrl.target === 'preview-transfer-icon') selector = '.transfer-icon';
-
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};\n}\n\n`;
-                    // 特殊处理转账文字颜色
-                    if (ctrl.id === 'ctrl-transfer-text') {
-                        css += `.transfer-info {\n    color: ${value};\n}\n\n`;
-                    }
-                }
-            } else if (ctrl.type === 'px' && ctrl.prop.includes('Radius')) {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                else if (ctrl.target === 'preview-transfer-card') selector = '.message-content.transfer-msg';
+                else if (ctrl.target === 'preview-transfer-card') selector = '.transfer-card';
                 
                 if (selector) {
                     css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
