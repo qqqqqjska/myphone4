@@ -660,14 +660,25 @@ body {
     gap: 10px;
 }
 
-input[type="text"], input[type="password"], select {
+input[type="text"], 
+input[type="password"], 
+input[type="url"], 
+input[type="number"], 
+select {
     flex: 1;
-    padding: 8px;
-    border: 1px solid #e5e5ea;
-    border-radius: 6px;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
     font-size: 16px;
     background-color: #f2f2f7;
+    color: #000;
     margin: 0;
+    outline: none;
+    transition: background-color 0.2s;
+}
+
+input:focus, select:focus {
+    background-color: #e5e5ea;
 }
 
 textarea {
@@ -892,6 +903,7 @@ textarea {
 
 .setting-group input[type="text"],
 .setting-group input[type="number"],
+.setting-group input[type="url"],
 .setting-group textarea {
     width: 100%;
     background-color: #f2f2f7;
@@ -1288,6 +1300,8 @@ textarea {
     padding: 0 15px;
     background-color: #fff;
     font-size: 16px;
+    z-index: 10;
+    position: relative;
 }
 
 #send-msg-btn, #trigger-ai-reply-btn {
@@ -1317,6 +1331,13 @@ textarea {
     padding: 0 5px;
     cursor: pointer;
     transition: color 0.2s;
+    z-index: 20;
+    position: relative;
+}
+
+#trigger-ai-reply-btn {
+    z-index: 20;
+    position: relative;
 }
 
 .chat-toast {
@@ -2320,20 +2341,17 @@ textarea {
 }
 
 .memory-btn {
-    font-size: 13px;
+    font-size: 16px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px 0;
-    font-weight: 500;
+    padding: 4px;
+    color: #8e8e93; /* 灰色 */
+    transition: color 0.2s;
 }
 
-.memory-edit-btn {
-    color: #000; /* 黑白灰风格 */
-}
-
-.memory-delete-btn {
-    color: #ff3b30;
+.memory-btn:active {
+    color: #000;
 }
 
 .memory-content {
@@ -3135,6 +3153,7 @@ input.msg-select-checkbox {
     font-weight: 600;
     color: #000;
     text-align: center;
+    text-align-last: center;
     border: none !important;
     background-color: #fff !important;
     width: 80%;

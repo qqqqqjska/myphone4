@@ -168,12 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化
     init();
 
-    function init() {
+    async function init() {
         setupEventListeners();
         setupIOSFullScreen(); // 添加iOS全屏适配
         
         try {
-            loadConfig();
+            await loadConfig();
         } catch (e) {
             console.error('加载配置失败:', e);
         }
@@ -589,6 +589,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // 用户设置卡片背景预览
+        const userSettingBgInput = document.getElementById('chat-setting-user-bg-input');
+        const userSettingBgContainer = document.getElementById('user-setting-bg-container');
+        if (userSettingBgContainer && userSettingBgInput) {
+            userSettingBgContainer.addEventListener('click', () => userSettingBgInput.click());
+            userSettingBgInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        userSettingBgContainer.style.backgroundImage = `url(${event.target.result})`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
         const chatSettingAvatarInput = document.getElementById('chat-setting-avatar');
         if (chatSettingAvatarInput) {
             chatSettingAvatarInput.addEventListener('change', (e) => {
@@ -869,6 +886,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const cssPresetSelect = document.getElementById('css-preset-select');
         if (cssPresetSelect) cssPresetSelect.addEventListener('change', handleApplyCssPreset);
 
+        // 聊天设置 CSS 预设相关
+        const saveChatCssPresetBtn = document.getElementById('save-chat-css-preset');
+        if (saveChatCssPresetBtn) saveChatCssPresetBtn.addEventListener('click', handleSaveChatCssPreset);
+
+        const deleteChatCssPresetBtn = document.getElementById('delete-chat-css-preset');
+        if (deleteChatCssPresetBtn) deleteChatCssPresetBtn.addEventListener('click', handleDeleteChatCssPreset);
+
+        const chatCssPresetSelect = document.getElementById('chat-css-preset-select');
+        if (chatCssPresetSelect) chatCssPresetSelect.addEventListener('change', handleApplyChatCssPreset);
+
         // AI 设置相关 (主)
         setupAiListeners(false);
         
@@ -1046,6 +1073,290 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (multiSelectCancelBtn) multiSelectCancelBtn.addEventListener('click', exitMultiSelectMode);
         if (multiSelectDeleteBtn) multiSelectDeleteBtn.addEventListener('click', deleteSelectedMessages);
+
+        // 主题自定义器
+        const openThemeCustomizerBtn = document.getElementById('open-theme-customizer-btn');
+        const themeCustomizerApp = document.getElementById('theme-customizer-app');
+        const closeThemeCustomizerBtn = document.getElementById('close-theme-customizer');
+
+        if (openThemeCustomizerBtn) {
+            openThemeCustomizerBtn.addEventListener('click', () => {
+                themeCustomizerApp.classList.remove('hidden');
+                initThemeCustomizer();
+            });
+        }
+
+        if (closeThemeCustomizerBtn) {
+            closeThemeCustomizerBtn.addEventListener('click', () => {
+                themeCustomizerApp.classList.add('hidden');
+            });
+        }
+    }
+
+    // --- 主题自定义器功能 ---
+    function initThemeCustomizer() {
+        const controls = [
+            { id: 'ctrl-top-bg', target: 'preview-top-bar', prop: 'backgroundImage', type: 'url' },
+            { id: 'ctrl-bottom-bg', target: 'preview-bottom-bar', prop: 'backgroundImage', type: 'url' },
+            { id: 'ctrl-top-height', target: 'preview-top-bar', prop: 'height', type: 'px', displayId: 'val-top-height' },
+            { id: 'ctrl-bottom-height', target: 'preview-bottom-bar', prop: 'height', type: 'px', displayId: 'val-bottom-height' },
+            { id: 'ctrl-input-width', target: 'preview-input', prop: 'width', type: '%', displayId: 'val-input-width' },
+            { id: 'ctrl-input-radius', target: 'preview-input', prop: 'borderRadius', type: 'px', displayId: 'val-input-radius' },
+            
+            // 位置偏移 (Transform)
+            { id: 'ctrl-bottom-bar-x', target: 'preview-bottom-bar', type: 'transform-x', pair: 'ctrl-bottom-bar-y', displayId: 'val-bottom-bar-x' },
+            { id: 'ctrl-bottom-bar-y', target: 'preview-bottom-bar', type: 'transform-y', pair: 'ctrl-bottom-bar-x', displayId: 'val-bottom-bar-y' },
+            { id: 'ctrl-title-x', target: 'preview-title', type: 'transform-x', pair: 'ctrl-title-y', displayId: 'val-title-x' },
+            { id: 'ctrl-title-y', target: 'preview-title', type: 'transform-y', pair: 'ctrl-title-x', displayId: 'val-title-y' },
+            { id: 'ctrl-input-x', target: 'preview-input', type: 'transform-x', pair: 'ctrl-input-y', displayId: 'val-input-x' },
+            { id: 'ctrl-input-y', target: 'preview-input', type: 'transform-y', pair: 'ctrl-input-x', displayId: 'val-input-y' },
+            { id: 'ctrl-back-x', target: 'preview-back-btn', type: 'transform-x', pair: 'ctrl-back-y', displayId: 'val-back-x' },
+            { id: 'ctrl-back-y', target: 'preview-back-btn', type: 'transform-y', pair: 'ctrl-back-x', displayId: 'val-back-y' },
+            { id: 'ctrl-menu-x', target: 'preview-menu-btn', type: 'transform-x', pair: 'ctrl-menu-y', displayId: 'val-menu-x' },
+            { id: 'ctrl-menu-y', target: 'preview-menu-btn', type: 'transform-y', pair: 'ctrl-menu-x', displayId: 'val-menu-y' },
+            { id: 'ctrl-plus-x', target: 'preview-plus-btn', type: 'transform-x', pair: 'ctrl-plus-y', displayId: 'val-plus-x' },
+            { id: 'ctrl-plus-y', target: 'preview-plus-btn', type: 'transform-y', pair: 'ctrl-plus-x', displayId: 'val-plus-y' },
+            { id: 'ctrl-emoji-x', target: 'preview-emoji-btn', type: 'transform-x', pair: 'ctrl-emoji-y', displayId: 'val-emoji-x' },
+            { id: 'ctrl-emoji-y', target: 'preview-emoji-btn', type: 'transform-y', pair: 'ctrl-emoji-x', displayId: 'val-emoji-y' },
+            { id: 'ctrl-send-x', target: 'preview-send-btn', type: 'transform-x', pair: 'ctrl-send-y', displayId: 'val-send-x' },
+            { id: 'ctrl-send-y', target: 'preview-send-btn', type: 'transform-y', pair: 'ctrl-send-x', displayId: 'val-send-y' },
+
+            // 按钮大小 (Font Size)
+            { id: 'ctrl-back-size', target: 'preview-back-btn', prop: 'fontSize', type: 'px', displayId: 'val-back-size' },
+            { id: 'ctrl-menu-size', target: 'preview-menu-btn', prop: 'fontSize', type: 'px', displayId: 'val-menu-size' },
+            { id: 'ctrl-plus-size', target: 'preview-plus-btn', prop: 'fontSize', type: 'px', displayId: 'val-plus-size' },
+            { id: 'ctrl-emoji-size', target: 'preview-emoji-btn', prop: 'fontSize', type: 'px', displayId: 'val-emoji-size' },
+            { id: 'ctrl-send-size', target: 'preview-send-btn', prop: 'fontSize', type: 'px', displayId: 'val-send-size' },
+
+            // 图标处理
+            { id: 'ctrl-back-icon', target: 'preview-back-btn', type: 'icon' },
+            { id: 'ctrl-menu-icon', target: 'preview-menu-btn', type: 'icon' },
+            { id: 'ctrl-plus-icon', target: 'preview-plus-btn', type: 'icon' },
+            { id: 'ctrl-emoji-icon', target: 'preview-emoji-btn', type: 'icon' },
+            { id: 'ctrl-send-icon', target: 'preview-send-btn', type: 'icon' }
+        ];
+
+        controls.forEach(ctrl => {
+            const input = document.getElementById(ctrl.id);
+            if (!input) return;
+
+            // 移除旧的监听器（防止重复绑定）
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+
+            newInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                
+                // 更新显示值
+                if (ctrl.displayId) {
+                    document.getElementById(ctrl.displayId).textContent = value;
+                }
+
+                // 更新预览
+                updatePreview(ctrl, value);
+                
+                // 生成 CSS
+                generateCSS(controls);
+            });
+        });
+
+        // 复制 CSS 按钮
+        const copyBtn = document.getElementById('copy-css-btn');
+        if (copyBtn) {
+            const newCopyBtn = copyBtn.cloneNode(true);
+            copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
+            newCopyBtn.addEventListener('click', () => {
+                const css = document.getElementById('css-output').value;
+                navigator.clipboard.writeText(css).then(() => {
+                    alert('CSS 代码已复制');
+                });
+            });
+        }
+
+        // 应用到全局按钮
+        const applyBtn = document.getElementById('apply-to-global-btn');
+        if (applyBtn) {
+            const newApplyBtn = applyBtn.cloneNode(true);
+            applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
+            newApplyBtn.addEventListener('click', () => {
+                const css = document.getElementById('css-output').value;
+                state.css = css;
+                applyCSS(css);
+                saveConfig();
+                alert('已应用到全局聊天页面');
+            });
+        }
+
+        // 重置按钮
+        const resetBtn = document.getElementById('reset-theme-btn');
+        if (resetBtn) {
+            const newResetBtn = resetBtn.cloneNode(true);
+            resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+            newResetBtn.addEventListener('click', () => {
+                controls.forEach(c => {
+                    const input = document.getElementById(c.id);
+                    if (input) {
+                        // 重置为默认值
+                        if (c.id === 'ctrl-top-height') input.value = 64;
+                        else if (c.id === 'ctrl-bottom-height') input.value = 50;
+                        else if (c.id === 'ctrl-input-width') input.value = 100;
+                        else if (c.id === 'ctrl-input-radius') input.value = 18;
+                        else if (c.id.includes('size')) {
+                             if (c.id.includes('plus') || c.id.includes('emoji') || c.id.includes('send')) input.value = 24;
+                             else input.value = 18;
+                        }
+                        else if (c.type.includes('transform')) input.value = 0;
+                        else input.value = ''; // URL 等
+                        
+                        // 触发 input 事件以更新预览
+                        input.dispatchEvent(new Event('input'));
+                    }
+                });
+                
+                // 清空 CSS
+                state.css = '';
+                applyCSS('');
+                saveConfig();
+                alert('已重置所有自定义设置');
+            });
+        }
+
+        // 初始化 CSS
+        generateCSS(controls);
+    }
+
+    function updatePreview(ctrl, value) {
+        const target = document.getElementById(ctrl.target);
+        if (!target) return;
+
+        if (ctrl.type === 'url') {
+            if (value) {
+                target.style[ctrl.prop] = `url('${value}')`;
+                target.style.backgroundSize = 'cover';
+                target.style.backgroundPosition = 'center';
+            } else {
+                target.style[ctrl.prop] = '';
+            }
+        } else if (ctrl.type === 'px') {
+            target.style[ctrl.prop] = `${value}px`;
+            // 如果是顶栏高度变化，需要调整消息区域的 top
+            if (ctrl.id === 'ctrl-top-height') {
+                document.getElementById('preview-messages').style.top = `${value}px`;
+            }
+            // 如果是底栏高度变化，需要调整消息区域的 bottom
+            if (ctrl.id === 'ctrl-bottom-height') {
+                document.getElementById('preview-messages').style.bottom = `${value}px`;
+            }
+        } else if (ctrl.type === '%') {
+            target.style[ctrl.prop] = `${value}%`;
+            if (ctrl.prop === 'width') {
+                target.style.flex = 'none'; // 修复宽度不生效
+            }
+        } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
+            const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
+            const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
+            const x = xInput ? xInput.value : 0;
+            const y = yInput ? yInput.value : 0;
+            
+            let defaultTransform = '';
+            if (ctrl.target === 'preview-title') defaultTransform = 'translateX(-50%)';
+            else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) defaultTransform = 'translateY(-50%)';
+            
+            target.style.transform = `${defaultTransform} translate(${x}px, ${y}px)`;
+        } else if (ctrl.type === 'icon') {
+            // 按钮内部图标替换
+            if (value) {
+                target.innerHTML = `<img src="${value}" style="width: 1em; height: 1em; object-fit: contain; font-size: inherit;">`;
+            } else {
+                // 恢复默认
+                if (ctrl.id === 'ctrl-back-icon') target.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                if (ctrl.id === 'ctrl-menu-icon') target.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
+                if (ctrl.id === 'ctrl-plus-icon') target.innerHTML = '<i class="fas fa-plus-circle"></i>';
+                if (ctrl.id === 'ctrl-emoji-icon') target.innerHTML = '<i class="far fa-smile"></i>';
+                if (ctrl.id === 'ctrl-send-icon') target.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            }
+        }
+    }
+
+    function generateCSS(controls) {
+        let css = '/* 自定义主题 CSS */\n\n';
+        const processedTransforms = new Set();
+        
+        controls.forEach(ctrl => {
+            const input = document.getElementById(ctrl.id);
+            const value = input ? input.value : '';
+            
+            if (!value && value !== 0) return; // 允许 0
+            
+            // 忽略默认值
+            if (ctrl.id === 'ctrl-top-height' && value == 64) return;
+            if (ctrl.id === 'ctrl-bottom-height' && value == 50) return;
+            if (ctrl.id === 'ctrl-input-width' && value == 100) return;
+            if (ctrl.id === 'ctrl-input-radius' && value == 18) return;
+            if (ctrl.id === 'ctrl-back-size' && value == 18) return;
+            if (ctrl.id === 'ctrl-menu-size' && value == 18) return;
+            if (ctrl.id === 'ctrl-plus-size' && value == 24) return;
+            if (ctrl.id === 'ctrl-emoji-size' && value == 24) return;
+            if (ctrl.id === 'ctrl-send-size' && value == 24) return;
+
+            if (ctrl.id === 'ctrl-top-bg') {
+                css += `/* 顶栏背景 */\n.wechat-header, .chat-header {\n    background-image: url('${value}');\n    background-size: cover;\n    background-position: center;\n    background-color: transparent;\n}\n\n`;
+            } else if (ctrl.id === 'ctrl-bottom-bg') {
+                css += `/* 底栏背景 */\n.wechat-tab-bar, .chat-input-area {\n    background-image: url('${value}');\n    background-size: cover;\n    background-position: center;\n    background-color: transparent;\n}\n\n`;
+            } else if (ctrl.id === 'ctrl-top-height') {
+                css += `/* 顶栏高度 */\n.wechat-header, .chat-header {\n    height: calc(${value}px + env(safe-area-inset-top));\n    padding-top: env(safe-area-inset-top);\n}\n.wechat-body, .chat-body {\n    padding-top: calc(${value}px + env(safe-area-inset-top));\n}\n\n`;
+            } else if (ctrl.id === 'ctrl-bottom-height') {
+                css += `/* 底栏高度 */\n.wechat-tab-bar, .chat-input-area {\n    height: calc(${value}px + env(safe-area-inset-bottom));\n    padding-bottom: env(safe-area-inset-bottom);\n}\n#wechat-tab-contacts, #wechat-tab-me {\n    padding-bottom: calc(${value}px + env(safe-area-inset-bottom));\n}\n\n`;
+            } else if (ctrl.id === 'ctrl-input-width') {
+                css += `/* 输入框宽度 */\n#chat-input {\n    width: ${value}%;\n    flex: unset;\n}\n\n`;
+            } else if (ctrl.id === 'ctrl-input-radius') {
+                css += `/* 输入框圆角 */\n#chat-input {\n    border-radius: ${value}px;\n}\n\n`;
+            } else if (ctrl.type === 'px' && ctrl.prop === 'fontSize') {
+                let selector = '';
+                if (ctrl.target === 'preview-back-btn') selector = '#back-to-contacts';
+                else if (ctrl.target === 'preview-menu-btn') selector = '#chat-settings-btn';
+                else if (ctrl.target === 'preview-plus-btn') selector = '#chat-more-btn';
+                else if (ctrl.target === 'preview-emoji-btn') selector = '#sticker-btn';
+                else if (ctrl.target === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
+                
+                if (selector) {
+                    css += `${selector} {\n    font-size: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
+                if (processedTransforms.has(ctrl.target)) return;
+                processedTransforms.add(ctrl.target);
+                
+                const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
+                const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
+                const x = xInput ? xInput.value : 0;
+                const y = yInput ? yInput.value : 0;
+                
+                if (x == 0 && y == 0) return;
+                
+                let selector = '';
+                if (ctrl.target === 'preview-bottom-bar') selector = '.chat-input-area';
+                else if (ctrl.target === 'preview-title') selector = '.chat-header > span';
+                else if (ctrl.target === 'preview-input') selector = '#chat-input';
+                else if (ctrl.target === 'preview-back-btn') selector = '#back-to-contacts';
+                else if (ctrl.target === 'preview-menu-btn') selector = '#chat-settings-btn';
+                else if (ctrl.target === 'preview-plus-btn') selector = '#chat-more-btn';
+                else if (ctrl.target === 'preview-emoji-btn') selector = '#sticker-btn';
+                else if (ctrl.target === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
+
+                if (selector) {
+                    let transformValue = `translate(${x}px, ${y}px)`;
+                    if (ctrl.target === 'preview-title') transformValue = `translateX(-50%) ${transformValue}`;
+                    else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) transformValue = `translateY(-50%) ${transformValue}`;
+                    
+                    css += `${selector} {\n    transform: ${transformValue};\n}\n\n`;
+                }
+            }
+            else if (ctrl.type.includes('icon')) {
+                css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
+            }
+        });
+
+        document.getElementById('css-output').value = css;
     }
 
     function handleRegenerateReply() {
@@ -1934,15 +2245,15 @@ ${contextDesc}
         
         // 检查缓存
         if (!forceRefresh) {
-            const cachedData = localStorage.getItem(cacheKey);
-            if (cachedData) {
-                try {
-                    const itinerary = JSON.parse(cachedData);
-                    renderItinerary(itinerary.events);
+            try {
+                const cachedData = await localforage.getItem(cacheKey);
+                if (cachedData) {
+                    // localForage 自动处理 JSON 解析
+                    renderItinerary(cachedData.events);
                     return;
-                } catch (e) {
-                    console.error('缓存解析失败', e);
                 }
+            } catch (e) {
+                console.error('读取行程缓存失败', e);
             }
         }
 
@@ -2046,7 +2357,7 @@ JSON格式示例：
                 generatedDate: today,
                 events: events
             };
-            localStorage.setItem(cacheKey, JSON.stringify(itineraryData));
+            await localforage.setItem(cacheKey, itineraryData);
 
             renderItinerary(events);
 
@@ -2074,14 +2385,13 @@ JSON格式示例：
         
         // 获取现有行程
         let existingEvents = [];
-        const cachedData = localStorage.getItem(cacheKey);
-        if (cachedData) {
-            try {
-                const itinerary = JSON.parse(cachedData);
+        try {
+            const itinerary = await localforage.getItem(cacheKey);
+            if (itinerary) {
                 existingEvents = itinerary.events || [];
-            } catch (e) {
-                console.error('缓存解析失败', e);
             }
+        } catch (e) {
+            console.error('读取行程缓存失败', e);
         }
 
         // 准备上下文
@@ -2193,7 +2503,7 @@ JSON格式示例：
                     generatedDate: today,
                     events: existingEvents
                 };
-                localStorage.setItem(cacheKey, JSON.stringify(itineraryData));
+                await localforage.setItem(cacheKey, itineraryData);
 
                 // 更新联系人状态
                 contact.lastItineraryIndex = history.length;
@@ -2320,7 +2630,6 @@ JSON格式示例：
             item.className = `persona-item`;
             // 使用全局头像，名字使用身份的名字
             item.innerHTML = `
-                <img src="${state.userProfile.avatar}" class="persona-avatar">
                 <div class="persona-info">
                     <div class="persona-name">${p.name || '未命名身份'}</div>
                 </div>
@@ -3170,6 +3479,7 @@ JSON格式示例：
         document.getElementById('chat-setting-avatar').value = '';
         document.getElementById('chat-setting-my-avatar').value = '';
         document.getElementById('chat-setting-bg').value = '';
+        document.getElementById('chat-setting-custom-css').value = contact.customCss || '';
 
         // 填充用户身份下拉框
         const userPersonaSelect = document.getElementById('chat-setting-user-persona');
@@ -3282,6 +3592,9 @@ JSON格式示例：
         // 渲染用户认知信息
         renderUserPerception(contact);
 
+        // 渲染 CSS 预设
+        renderChatCssPresets();
+
         document.getElementById('chat-settings-screen').classList.remove('hidden');
     }
 
@@ -3377,6 +3690,7 @@ JSON格式示例：
         const avatarInput = document.getElementById('chat-setting-avatar');
         const aiBgInput = document.getElementById('chat-setting-ai-bg-input');
         const myAvatarInput = document.getElementById('chat-setting-my-avatar');
+        const customCss = document.getElementById('chat-setting-custom-css').value;
         // const bgInput = document.getElementById('chat-setting-bg'); // 已改为画廊选择
 
         // 获取选中的世界书分类
@@ -3406,6 +3720,7 @@ JSON格式示例：
         contact.thoughtVisible = thoughtVisible;
         contact.realTimeVisible = realTimeVisible;
         contact.userPersonaId = userPersonaId ? parseInt(userPersonaId) : null;
+        contact.customCss = customCss;
         document.getElementById('chat-title').textContent = remark || contact.name;
         
         // 应用选中的背景
@@ -3464,6 +3779,17 @@ JSON格式示例：
                 chatScreen.style.backgroundPosition = 'center';
             } else {
                 chatScreen.style.backgroundImage = '';
+            }
+
+            // 更新自定义CSS
+            const existingStyle = document.getElementById('chat-custom-css');
+            if (existingStyle) existingStyle.remove();
+
+            if (contact.customCss) {
+                const style = document.createElement('style');
+                style.id = 'chat-custom-css';
+                style.textContent = contact.customCss;
+                document.head.appendChild(style);
             }
 
             document.getElementById('chat-settings-screen').classList.add('hidden');
@@ -4070,19 +4396,17 @@ JSON格式示例：
         container.scrollTop = container.scrollHeight;
     }
 
-    function getCurrentItineraryInfo(contactId) {
+    async function getCurrentItineraryInfo(contactId) {
         const contact = state.contacts.find(c => c.id === contactId);
         if (!contact) return '';
         
         const today = new Date().toISOString().split('T')[0];
         const cacheKey = `itinerary_${contact.id}_${today}`;
-        const cachedData = localStorage.getItem(cacheKey);
-        
-        if (!cachedData) return '';
         
         try {
-            const itinerary = JSON.parse(cachedData);
-            if (!itinerary.events || !Array.isArray(itinerary.events) || itinerary.events.length === 0) {
+            const itinerary = await localforage.getItem(cacheKey);
+            
+            if (!itinerary || !itinerary.events || !Array.isArray(itinerary.events) || itinerary.events.length === 0) {
                 return '';
             }
             
@@ -4231,7 +4555,7 @@ JSON格式示例：
             timeContext = `\n【当前真实时间】\n${timeStr}\n`;
             
             // 获取行程上下文
-            itineraryContext = getCurrentItineraryInfo(contact.id);
+            itineraryContext = await getCurrentItineraryInfo(contact.id);
         }
 
         // 构建 Prompt
@@ -5154,11 +5478,12 @@ ${itineraryContext}
         // 转换为数组索引 (楼层从1开始)
         const messagesToSummarize = history.slice(start - 1, end);
         const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        const range = `${start}-${end}`;
         
         document.getElementById('manual-summary-modal').classList.add('hidden');
         showNotification('正在手动总结...');
         
-        await generateSummary(contact, messagesToSummarize);
+        await generateSummary(contact, messagesToSummarize, range);
     }
 
     function openMemorySettings() {
@@ -5215,11 +5540,12 @@ ${itineraryContext}
                 <div class="memory-header">
                     <span class="memory-time">${timeStr}</span>
                     <div class="memory-actions">
-                        <button class="memory-edit-btn" onclick="window.editMemory(${memory.id})">编辑</button>
-                        <button class="memory-delete-btn" onclick="window.deleteMemory(${memory.id})">删除</button>
+                        <button class="memory-btn" onclick="window.editMemory(${memory.id})"><i class="fas fa-pen"></i></button>
+                        <button class="memory-btn" onclick="window.deleteMemory(${memory.id})"><i class="fas fa-ellipsis-h"></i></button>
                     </div>
                 </div>
                 <div class="memory-content">${memory.content}</div>
+                ${memory.range ? `<div style="text-align: right; margin-top: 8px; font-size: 12px; color: #999;">${memory.range}</div>` : ''}
             `;
             list.appendChild(item);
         });
@@ -5338,15 +5664,20 @@ ${itineraryContext}
         if (newMessagesCount >= contact.summaryLimit) {
             // 触发总结
             const messagesToSummarize = history.slice(contact.lastSummaryIndex);
+            
+            const startFloor = contact.lastSummaryIndex + 1;
+            const endFloor = history.length;
+            const range = `${startFloor}-${endFloor}`;
+
             contact.lastSummaryIndex = history.length; // 更新索引
             saveConfig(); // 保存索引更新
 
             showNotification('正在总结...');
-            await generateSummary(contact, messagesToSummarize);
+            await generateSummary(contact, messagesToSummarize, range);
         }
     }
 
-    async function generateSummary(contact, messages) {
+    async function generateSummary(contact, messages, range) {
         const settings = state.aiSettings2.url ? state.aiSettings2 : state.aiSettings; // 优先使用副API
         if (!settings.url || !settings.key) {
             console.log('未配置副API，无法自动总结');
@@ -5430,7 +5761,8 @@ ${itineraryContext}
                     id: Date.now(),
                     contactId: contact.id,
                     content: summary,
-                    time: Date.now()
+                    time: Date.now(),
+                    range: range
                 });
                 saveConfig();
                 
@@ -6031,6 +6363,71 @@ ${itineraryContext}
         }
     }
 
+    // --- 聊天设置 CSS 预设功能 ---
+
+    function handleSaveChatCssPreset() {
+        const name = prompt('请输入CSS预设名称：');
+        if (!name) return;
+        
+        const cssContent = document.getElementById('chat-setting-custom-css').value;
+        
+        const preset = {
+            name: name,
+            css: cssContent
+        };
+        
+        state.cssPresets.push(preset);
+        saveConfig();
+        renderChatCssPresets();
+        renderCssPresets(); // 同步更新美化中心的列表
+        document.getElementById('chat-css-preset-select').value = name;
+        alert('CSS预设已保存');
+    }
+
+    function handleDeleteChatCssPreset() {
+        const select = document.getElementById('chat-css-preset-select');
+        const name = select.value;
+        if (!name) return;
+        
+        if (confirm(`确定要删除预设 "${name}" 吗？`)) {
+            state.cssPresets = state.cssPresets.filter(p => p.name !== name);
+            saveConfig();
+            renderChatCssPresets();
+            renderCssPresets(); // 同步更新美化中心的列表
+        }
+    }
+
+    function handleApplyChatCssPreset(e) {
+        const name = e.target.value;
+        if (!name) return;
+        
+        const preset = state.cssPresets.find(p => p.name === name);
+        if (preset) {
+            document.getElementById('chat-setting-custom-css').value = preset.css;
+        }
+    }
+
+    function renderChatCssPresets() {
+        const select = document.getElementById('chat-css-preset-select');
+        if (!select) return;
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- 选择预设 --</option>';
+        
+        if (state.cssPresets) {
+            state.cssPresets.forEach(preset => {
+                const option = document.createElement('option');
+                option.value = preset.name;
+                option.textContent = preset.name;
+                select.appendChild(option);
+            });
+        }
+        
+        if (currentValue && state.cssPresets.some(p => p.name === currentValue)) {
+            select.value = currentValue;
+        }
+    }
+
     // --- AI 设置功能 ---
 
     async function handleFetchModels(isSecondary = false) {
@@ -6208,29 +6605,54 @@ ${itineraryContext}
             try { delete persistState.selectedMessages; } catch (e) {}
             try { delete persistState.isMultiSelectMode; } catch (e) {}
             try { delete persistState.selectedStickers; } catch (e) {}
-            localStorage.setItem('iphoneSimConfig', JSON.stringify(persistState));
+            
+            // 使用 localForage 保存
+            localforage.setItem('iphoneSimConfig', persistState).catch(err => {
+                console.error('保存数据失败:', err);
+                // 如果是配额超限，尝试提示用户
+                if (err.name === 'QuotaExceededError') {
+                    alert('存储空间不足，无法保存数据。请尝试清理一些图片或聊天记录。');
+                }
+            });
         } catch (e) {
-            alert('存储空间不足，无法保存所有数据（可能是图片太大）。建议减少壁纸或图标数量。');
-            console.error(e);
+            console.error('保存配置时发生错误:', e);
         }
     }
 
-    function loadConfig() {
-        const saved = localStorage.getItem('iphoneSimConfig');
-        if (saved) {
-            try {
-                const loadedState = JSON.parse(saved);
+    async function loadConfig() {
+        try {
+            // 尝试从 IndexedDB 加载
+            let loadedState = await localforage.getItem('iphoneSimConfig');
+            
+            // 如果 IndexedDB 为空，尝试从 localStorage 迁移
+            if (!loadedState) {
+                const localSaved = localStorage.getItem('iphoneSimConfig');
+                if (localSaved) {
+                    try {
+                        loadedState = JSON.parse(localSaved);
+                        console.log('检测到旧数据，正在迁移到 IndexedDB...');
+                        await localforage.setItem('iphoneSimConfig', loadedState);
+                        // 迁移成功后清除 localStorage，释放空间
+                        localStorage.removeItem('iphoneSimConfig');
+                        console.log('数据迁移完成');
+                    } catch (e) {
+                        console.error('迁移旧数据失败:', e);
+                    }
+                }
+            }
+
+            if (loadedState) {
                 Object.assign(state, loadedState);
                 
                 // 确保预设数组存在
                 if (!state.fontPresets) state.fontPresets = [];
                 if (!state.cssPresets) state.cssPresets = [];
                 if (!state.aiSettings) state.aiSettings = { url: '', key: '', model: '', temperature: 0.7 };
-        if (!state.aiPresets) state.aiPresets = [];
-        if (!state.aiSettings2) state.aiSettings2 = { url: '', key: '', model: '', temperature: 0.7 };
-        if (!state.aiPresets2) state.aiPresets2 = [];
-        if (!state.chatWallpapers) state.chatWallpapers = [];
-        if (!state.contacts) state.contacts = [];
+                if (!state.aiPresets) state.aiPresets = [];
+                if (!state.aiSettings2) state.aiSettings2 = { url: '', key: '', model: '', temperature: 0.7 };
+                if (!state.aiPresets2) state.aiPresets2 = [];
+                if (!state.chatWallpapers) state.chatWallpapers = [];
+                if (!state.contacts) state.contacts = [];
                 if (!state.chatHistory) state.chatHistory = {};
                 if (!state.worldbook) state.worldbook = [];
                 if (!state.userPersonas) state.userPersonas = [];
@@ -6278,17 +6700,23 @@ ${itineraryContext}
                 renderWorldbookCategoryList();
                 renderMeTab();
                 renderMoments();
-            } catch (e) {
-                console.error('解析配置失败:', e);
             }
+        } catch (e) {
+            console.error('加载配置失败:', e);
         }
     }
 
     function handleClearAllData() {
         if (confirm('确定要清空所有数据吗？此操作不可恢复！所有设置、聊天记录、图片等都将丢失。')) {
-            localStorage.removeItem('iphoneSimConfig');
-            alert('所有数据已清空，页面将刷新。');
-            location.reload();
+            localforage.clear().then(() => {
+                // 同时也清除 localStorage 以防万一
+                localStorage.removeItem('iphoneSimConfig');
+                alert('所有数据已清空，页面将刷新。');
+                location.reload();
+            }).catch(err => {
+                console.error('清空数据失败:', err);
+                alert('清空数据失败');
+            });
         }
     }
 
