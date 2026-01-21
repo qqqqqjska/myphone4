@@ -274,56 +274,158 @@ body {
     margin-bottom: 20px;
 }
 
-.profile-container {
-    position: relative;
+/* Music Widget Styles */
+.music-widget {
     width: 100%;
+    max-width: 350px;
+    height: 160px;
+    background-color: rgba(220, 220, 220, 0.8); /* 浅灰色半透明背景 */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 25px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding-top: 40px; /* 为头像留出空间 */
-}
-
-.avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    cursor: pointer;
+    position: relative;
     overflow: hidden;
-    border: 3px solid #fff;
-    box-shadow: var(--shadow-md);
-    z-index: 2;
-    position: absolute;
-    top: 0;
-    background-color: #fff;
 }
 
-.avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.profile-card-bg {
-    background-color: var(--card-bg);
-    width: 120px; /* 略大于头像 */
-    padding: 50px 15px 15px; /* 顶部padding为头像留位 */
-    border-radius: 20px;
-    box-shadow: var(--shadow-sm);
-    text-align: center;
+.vinyl-wrapper {
+    width: 130px;
+    height: 130px;
+    flex-shrink: 0;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
+    margin-right: 15px;
 }
 
-.user-info h2 {
-    font-size: 16px;
-    font-weight: 600;
+.vinyl-disk {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 0%, #333 100%);
+    /* 黑胶纹理 */
+    background-image: repeating-radial-gradient(
+      #111 0, 
+      #111 2px, 
+      #222 3px, 
+      #222 4px
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.vinyl-disk.playing {
+    animation: rotate 5s linear infinite;
+}
+
+.vinyl-cover {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid #111;
+    position: relative;
+    z-index: 2;
+}
+
+/* 唱片中心孔 */
+.vinyl-cover::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background-color: #000;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.music-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /* 居中对齐 */
+    overflow: hidden;
+    height: 100%;
+    text-align: center; /* 文本居中 */
+}
+
+.song-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
-.user-info p {
+.artist-name {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #666;
+    margin-bottom: 10px;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lyrics-display {
+    font-size: 12px;
+    color: #333;
+    line-height: 1.6;
+    height: 60px; /* 增加高度 */
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+
+.lyrics-scroll-container {
+    position: absolute;
+    top: 20px; /* 初始位置 */
+    left: 0;
+    width: 100%;
+    transition: transform 0.3s ease-out;
+}
+
+.lyric-line {
+    min-height: 20px;
+    opacity: 0.6;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.lyric-line.active {
+    opacity: 1;
+    font-weight: 600;
+    transform: scale(1.05);
+}
+
+.music-controls-mini {
+    position: absolute;
+    bottom: 15px;
+    right: 20px;
+    font-size: 18px;
+    color: #000;
 }
 
 /* 主要内容区域 */
@@ -471,12 +573,17 @@ body {
     z-index: 100;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
+    transition: opacity 0.15s ease-in-out, visibility 0s linear 0s;
+    opacity: 1;
+    visibility: visible;
 }
 
 .app-screen.hidden {
-    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    display: flex !important;
+    transition: opacity 0.15s ease-in-out, visibility 0s linear 0.15s;
 }
 
 .app-header {
@@ -1008,7 +1115,12 @@ textarea {
     background-color: #f2f2f7; /* 与底栏一致 */
     border-bottom: 1px solid rgba(0,0,0,0.1);
     z-index: 100;
-    transition: background-color 0.3s, color 0.3s, border-bottom 0.3s;
+    transition: background-color 0.3s, color 0.3s, border-bottom 0.3s, opacity 0.15s ease-in-out;
+    opacity: 1;
+}
+
+.wechat-header.fade-out {
+    opacity: 0;
 }
 
 .wechat-header.transparent {
@@ -1062,7 +1174,7 @@ textarea {
 
 .wechat-body {
     flex: 1;
-    background-color: var(--wechat-bg);
+    background-color: #fff; /* 改为白色背景 */
     overflow-y: auto;
     padding-bottom: 0;
     padding-top: 91px;
@@ -1080,89 +1192,238 @@ textarea {
 
 /* 给各个 tab 内容添加 padding 以防被底栏遮挡 */
 #wechat-tab-contacts, #wechat-tab-me {
-    padding-bottom: calc(50px + env(safe-area-inset-bottom));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)); /* 增加底部 padding */
+}
+
+/* 联系人页面特殊处理：隐藏通用 header，使用自定义 header */
+#wechat-app:has(#wechat-tab-contacts.active) .wechat-header {
+    display: none;
+}
+
+#wechat-app:has(#wechat-tab-contacts.active) .wechat-body {
+    padding-top: 0; /* 移除顶部 padding */
 }
 
 .wechat-tab-content {
     display: none;
     height: 100%;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
 }
 
 .wechat-tab-content.active {
     display: block;
+    opacity: 1;
 }
 
+.wechat-tab-content.fade-out {
+    opacity: 0;
+}
+
+/* 悬浮 Dock 样式底栏 */
 .wechat-tab-bar {
-    height: calc(50px + env(safe-area-inset-bottom));
-    background-color: #f7f7f7;
-    border-top: 1px solid var(--wechat-border);
+    height: 60px;
+    background-color: #fff;
+    border-top: none;
     display: flex;
     justify-content: space-around;
     align-items: center;
     position: absolute;
-    bottom: 0;
-    width: 100%;
-    z-index: 10;
-    padding-bottom: env(safe-area-inset-bottom); /* 确保图标不被遮挡 */
+    bottom: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: 20px;
+    right: 20px;
+    width: auto;
+    z-index: 100;
+    border-radius: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    padding-bottom: 0;
 }
 
 /* 动态页激活时隐藏底栏 */
 #wechat-app:has(#wechat-tab-moments.active) .wechat-tab-bar {
-    display: none;
+    display: flex;
 }
 
 .wechat-tab-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    color: #000;
+    gap: 4px;
+    color: #8e8e93;
     font-size: 10px;
     cursor: pointer;
     flex: 1;
 }
 
 .wechat-tab-item i {
-    font-size: 20px;
+    font-size: 22px;
 }
 
 .wechat-tab-item.active {
-    color: var(--wechat-green);
+    color: #007AFF; /* 使用蓝色 */
+}
+
+/* Custom Contacts Header */
+.contacts-custom-header {
+    padding: 20px;
+    padding-top: calc(20px + max(47px, env(safe-area-inset-top, 0px)));
+    background-color: #fff;
+}
+
+.contacts-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #000;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.contacts-title {
+    font-size: 34px;
+    font-weight: 800;
+    color: #000;
+    margin-bottom: 20px;
+}
+
+.contacts-group-tabs {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    /* Hide scrollbar */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.contacts-group-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.group-tab {
+    font-size: 16px;
+    color: #8e8e93;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+}
+
+.group-tab.active {
+    color: #007AFF;
+    font-weight: 600;
+}
+
+.group-tab.active::after {
+    /* content: ''; */ /* 移除下划线，参考图似乎没有 */
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: #007AFF;
+    border-radius: 50%;
 }
 
 /* Contact List */
 .contact-list {
     background-color: #fff;
+    padding: 0 20px;
+    transition: opacity 0.15s ease-in-out;
+    opacity: 1;
+}
+
+.contact-list.fade-out {
+    opacity: 0;
 }
 
 .contact-item {
     display: flex;
     align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--wechat-border);
+    padding: 15px 0;
+    border-bottom: none; /* 移除分割线 */
     cursor: pointer;
 }
 
 .contact-item:active {
-    background-color: #d9d9d9;
+    background-color: transparent; /* 移除点击背景 */
+    opacity: 0.7;
 }
 
 .contact-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    margin-right: 10px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin-right: 15px;
     object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .contact-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.contact-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .contact-name {
-    font-size: 16px;
+    font-size: 17px;
     color: #000;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.contact-time {
+    font-size: 12px;
+    color: #8e8e93;
+}
+
+.contact-msg-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.contact-msg-preview {
+    font-size: 14px;
+    color: #8e8e93;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.contact-status-icon {
+    font-size: 12px;
+}
+
+.unread-badge {
+    background-color: #007AFF;
+    color: #fff;
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-weight: 600;
 }
 
 .empty-state {
@@ -1216,10 +1477,17 @@ textarea {
 
 .chat-setting-tab-content {
     display: none;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
 }
 
 .chat-setting-tab-content.active {
     display: block;
+    opacity: 1;
+}
+
+.chat-setting-tab-content.fade-out {
+    opacity: 0;
 }
 
 /* Chat Screen */
@@ -1233,12 +1501,17 @@ textarea {
     z-index: 150;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
+    transition: opacity 0.15s ease-in-out, visibility 0s linear 0s;
+    opacity: 1;
+    visibility: visible;
 }
 
 .sub-screen.hidden {
-    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    display: flex !important;
+    transition: opacity 0.15s ease-in-out, visibility 0s linear 0.15s;
 }
 
 .chat-header {
@@ -1721,7 +1994,7 @@ textarea {
 /* Transfer Card Styles - Minimalist Black & White */
 .message-content.transfer-msg {
     padding: 0;
-    background-color: #ffffff;
+    background-color: #ffffff !important;
     width: 240px !important;
     height: 80px !important;
     overflow: hidden;
@@ -1735,8 +2008,8 @@ textarea {
 
 /* 修复用户转账卡片颜色被蓝色覆盖的问题 */
 .chat-message.user .message-content.transfer-msg {
-    background-color: #ffffff;
-    color: #000; /* 强制文字黑色 */
+    background-color: #ffffff !important;
+    color: #000 !important; /* 强制文字黑色 */
 }
 
 .message-content.transfer-msg.accepted,
@@ -1781,7 +2054,6 @@ textarea {
     flex-shrink: 0;
 }
 .message-content.transfer-msg:not(.accepted) .transfer-icon i {
-    transform: translate(-11px, -6px);
     display: inline-block;
 }
 
@@ -3213,6 +3485,22 @@ input.msg-select-checkbox {
     box-shadow: none !important;
 }
 
+.ai-setting-group-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 5px;
+    cursor: pointer;
+    gap: 5px;
+}
+
+.ai-setting-group-text {
+    font-size: 12px;
+    color: #8e8e93;
+    text-align: center;
+}
+
 .ai-setting-persona-container {
     width: 90%;
     margin-top: 15px;
@@ -3234,4 +3522,145 @@ input.msg-select-checkbox {
 
 .ai-setting-persona-input:focus {
     background-color: #e5e5ea;
+}
+
+/* 修复自定义主题页面中转账图标位置 */
+#chat-preview-container .transfer-icon {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+#chat-preview-container .transfer-icon i {
+    color: #fff;
+    font-size: 20px;
+}
+
+/* 确保转账卡片中的图标容器正确定位 */
+#preview-transfer-card .transfer-icon,
+#preview-transfer-card-accepted .transfer-icon {
+    position: relative !important;
+    transform: none !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+/* Music Settings Styles */
+.music-tab-content {
+    display: none;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.music-tab-content.active {
+    display: block;
+    opacity: 1;
+}
+
+#music-playlist .list-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5ea;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #fff;
+}
+
+#music-playlist .list-item:last-child {
+    border-bottom: none;
+}
+
+#music-playlist .list-item.active {
+    background-color: #f0f9ff;
+}
+
+/* Polaroid Widget Styles */
+.polaroid-widget {
+    width: 160px;
+    height: 180px;
+    position: relative;
+    cursor: pointer;
+}
+
+.polaroid-card {
+    position: absolute;
+    width: 140px;
+    background-color: #fff;
+    padding: 10px 10px 15px 10px; /* 底部留白更多 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bottom-card {
+    top: 10px;
+    left: 0;
+    transform: rotate(-6deg);
+    z-index: 1;
+}
+
+.top-card {
+    top: 0;
+    left: 10px;
+    transform: rotate(3deg);
+    z-index: 2;
+}
+
+.polaroid-widget:hover .bottom-card {
+    transform: rotate(-10deg) translateX(-5px);
+}
+
+.polaroid-widget:hover .top-card {
+    transform: rotate(5deg) translateX(5px);
+}
+
+.polaroid-img-container {
+    width: 100%;
+    aspect-ratio: 1;
+    background-color: #eee;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.polaroid-img-container img {
+    width: 100%;
+    height: 110%;
+    object-fit: cover;
+}
+
+.polaroid-text {
+    font-family: "Comic Sans MS", "Chalkboard SE", sans-serif; /* 手写风格字体 */
+    font-size: 14px;
+    color: #333;
+    text-align: right;
+    padding-right: 5px;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 20px;
+}
+
+.tape-strip {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+    width: 60px;
+    height: 25px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    backdrop-filter: blur(2px);
+    z-index: 3;
 }

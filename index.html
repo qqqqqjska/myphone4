@@ -56,16 +56,23 @@
 
         <!-- 顶部区域 -->
         <div class="top-section">
-            <div class="profile-container">
-                <!-- 头像 -->
-                <div class="avatar">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User Avatar">
+            <!-- 音乐小组件 -->
+            <div class="music-widget" id="music-widget">
+                <div class="vinyl-wrapper">
+                    <div class="vinyl-disk" id="vinyl-disk">
+                        <div class="vinyl-cover" id="vinyl-cover" style="background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix');"></div>
+                    </div>
                 </div>
-                <!-- 背景页脚 -->
-                <div class="profile-card-bg">
-                    <div class="user-info">
-                        <h2>User Name</h2>
-                        <p>Welcome back</p>
+                <div class="music-info">
+                    <div class="song-title" id="song-title">Happy Together</div>
+                    <div class="artist-name" id="artist-name">Maximillian</div>
+                    <div class="lyrics-display" id="lyrics-display">
+                        So fast, I almost missed it<br>
+                        I spill another glass of wine<br>
+                        Kill the lights to pass the time
+                    </div>
+                    <div class="music-controls-mini">
+                        <i class="fas fa-play" id="play-icon"></i>
                     </div>
                 </div>
             </div>
@@ -73,13 +80,27 @@
 
         <!-- 主要内容区域 -->
         <div class="main-content">
-            <!-- 左侧信封 -->
+            <!-- 左侧拍立得小组件 -->
             <div class="left-area">
-                <div class="app-item large-item">
-                    <div class="app-icon icon-envelope">
-                        <i class="fas fa-envelope"></i>
+                <div class="polaroid-widget" id="polaroid-widget">
+                    <!-- 底部拍立得 -->
+                    <div class="polaroid-card bottom-card">
+                        <div class="polaroid-img-container">
+                            <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-2" alt="Photo">
+                        </div>
+                        <div class="polaroid-text" id="polaroid-text-2">美好回忆</div>
                     </div>
-                    <span class="app-label">信息</span>
+                    <!-- 顶部拍立得 -->
+                    <div class="polaroid-card top-card">
+                        <div class="polaroid-img-container">
+                            <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-1" alt="Photo">
+                        </div>
+                        <div class="polaroid-text" id="polaroid-text-1">讨厌坏天气</div>
+                        <div class="tape-strip"></div>
+                    </div>
+                    <!-- 隐藏的文件输入框 -->
+                    <input type="file" id="polaroid-input-1" accept="image/*" class="file-input-hidden">
+                    <input type="file" id="polaroid-input-2" accept="image/*" class="file-input-hidden">
                 </div>
             </div>
             
@@ -301,6 +322,17 @@
             <div class="wechat-body" id="wechat-body">
                 <!-- 好友列表页 -->
                 <div id="wechat-tab-contacts" class="wechat-tab-content active">
+                    <div class="contacts-custom-header">
+                        <div class="contacts-top-bar">
+                            <button class="icon-btn" id="contacts-back-btn"><i class="fas fa-bars"></i></button>
+                            <div style="flex: 1;"></div>
+                            <button class="icon-btn" id="add-contact-btn-custom"><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="contacts-title">Message</div>
+                        <div class="contacts-group-tabs" id="contacts-group-tabs">
+                            <!-- 分组标签将通过JS生成 -->
+                        </div>
+                    </div>
                     <div class="contact-list" id="contact-list">
                         <!-- 联系人项将通过JS生成 -->
                     </div>
@@ -385,6 +417,12 @@
                             <!-- 备注 -->
                             <div class="ai-setting-remark-container">
                                 <input type="text" id="chat-setting-remark" class="ai-setting-remark-input" placeholder="备注">
+                            </div>
+
+                            <!-- 分组 -->
+                            <div class="ai-setting-group-container" id="chat-setting-group-trigger">
+                                <span id="chat-setting-group-value" class="ai-setting-group-text">未分组</span>
+                                <i class="fas fa-chevron-right" style="font-size: 12px; color: #ccc;"></i>
                             </div>
 
                             <!-- 人设 -->
@@ -635,6 +673,22 @@
                             <button id="confirm-delete-sticker-cats" class="ios-btn-block" style="max-width: 160px;">删除所选</button>
                             <button id="close-delete-sticker-cats" class="ios-btn-block secondary" style="max-width: 120px;">取消</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分组选择弹窗 -->
+            <div id="group-select-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>设置分组</h3>
+                        <button class="close-btn" id="close-group-select">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="ios-list-group" id="group-list">
+                            <!-- 分组列表 -->
+                        </div>
+                        <button id="create-group-btn" class="ios-btn-block">新建分组</button>
                     </div>
                 </div>
             </div>
@@ -1242,7 +1296,7 @@
             <div class="app-header">
                 <button id="close-theme-customizer" class="back-btn"><i class="fas fa-chevron-left"></i> 返回</button>
                 <h3>主题自定义</h3>
-                <div style="width: 60px;"></div>
+                <button id="save-theme-customizer-preset" class="wechat-icon-btn" style="font-size: 16px; font-weight: 600; color: #007AFF; width: auto; padding: 0 10px;">保存</button>
             </div>
             <div class="app-body" style="display: flex; flex-direction: column; gap: 20px; padding: 20px;">
                 
@@ -1296,46 +1350,6 @@
                                     <div class="message-content">这是我的第二条回复。</div>
                                 </div>
                             </div>
-                            <!-- 转账消息 -->
-                            <div id="preview-transfer-row" class="chat-message user">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="chat-avatar">
-                                <div class="msg-wrapper">
-                                    <div class="message-content transfer-msg">
-                                        <div id="preview-transfer-card" class="transfer-card">
-                                            <div class="transfer-top">
-                                                <div id="preview-transfer-icon" class="transfer-icon"><i id="preview-transfer-icon-inner" class="fas fa-exchange-alt"></i></div>
-                                                <div class="transfer-info">
-                                                    <div id="preview-transfer-amount" class="transfer-amount">¥100.00</div>
-                                                    <div id="preview-transfer-remark" class="transfer-remark">转账给你</div>
-                                                </div>
-                                            </div>
-                                            <div id="preview-transfer-bottom" class="transfer-bottom">
-                                                <span id="preview-transfer-desc">微信转账</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- 已接受/收款的转账预览（用于自定义预览对比） -->
-                            <div id="preview-transfer-row-accepted" class="chat-message user">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User2" class="chat-avatar">
-                                <div class="msg-wrapper">
-                                    <div class="message-content transfer-msg accepted">
-                                        <div id="preview-transfer-card-accepted" class="transfer-card">
-                                            <div class="transfer-top">
-                                                <div id="preview-transfer-icon-accepted" class="transfer-icon"><i id="preview-transfer-icon-inner-accepted" class="fas fa-check"></i></div>
-                                                <div class="transfer-info">
-                                                    <div id="preview-transfer-amount-accepted" class="transfer-amount">¥100.00</div>
-                                                    <div id="preview-transfer-remark-accepted" class="transfer-remark">已收款</div>
-                                                </div>
-                                            </div>
-                                            <div id="preview-transfer-bottom-accepted" class="transfer-bottom">
-                                                <span id="preview-transfer-desc-accepted">已通过转账</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- 底栏 (复用 chat-input-area 类) -->
@@ -1354,7 +1368,6 @@
                     <div id="customize-nav" style="display: flex; border-bottom: 1px solid #eee; margin-bottom: 15px; padding-bottom: 10px; overflow-x: auto; gap: 20px;">
                         <div class="nav-item active" style="font-weight: bold; color: #000; border-bottom: 2px solid #000; cursor: pointer; white-space: nowrap;">顶栏和底栏</div>
                         <div class="nav-item" style="color: #888; cursor: pointer; white-space: nowrap;">消息样式</div>
-                        <div class="nav-item" style="color: #888; cursor: pointer; white-space: nowrap;">转账卡片</div>
                     </div>
 
                     <!-- 控件区域 (第一部分：顶栏和底栏) -->
@@ -1369,49 +1382,6 @@
                                     <label>底栏背景 URL</label>
                                     <input type="url" id="ctrl-bottom-bg" placeholder="https://...">
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-group">
-                            <label>顶栏高度 (<span id="val-top-height">91</span>px)</label>
-                            <input type="range" id="ctrl-top-height" min="40" max="100" value="91" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>底栏高度 (<span id="val-bottom-height">50</span>px)</label>
-                            <input type="range" id="ctrl-bottom-height" min="40" max="100" value="50" style="width: 100%;">
-                        </div>
-                        
-                        <div class="setting-group">
-                            <label>底栏位置偏移 (<span id="val-bottom-bar-x">0</span>, <span id="val-bottom-bar-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-bottom-bar-x" min="-50" max="50" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-bottom-bar-y" min="-50" max="50" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-
-                        <div class="setting-group">
-                            <label>标题(备注)位置偏移 (<span id="val-title-x">0</span>, <span id="val-title-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-title-x" min="-50" max="50" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-title-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-
-                        <div class="setting-group">
-                            <label>输入框宽度 (<span id="val-input-width">65</span>%)</label>
-                            <input type="range" id="ctrl-input-width" min="10" max="150" value="65" style="width: 100%;">
-                        </div>
-
-                        <div class="setting-group">
-                            <label>输入框圆角 (<span id="val-input-radius">18</span>px)</label>
-                            <input type="range" id="ctrl-input-radius" min="0" max="30" value="18" style="width: 100%;">
-                        </div>
-
-                        <div class="setting-group">
-                            <label>输入框位置偏移 (<span id="val-input-x">0</span>, <span id="val-input-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-input-x" min="-50" max="50" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-input-y" min="-20" max="20" value="0" style="flex: 1;">
                             </div>
                         </div>
                         
@@ -1444,70 +1414,8 @@
                             <input type="url" id="ctrl-send-icon" placeholder="https://...">
                         </div>
 
-                        <div class="section-title" style="margin-top: 20px;">按钮大小 (Font Size)</div>
-                        
-                        <div class="setting-group">
-                            <label>返回按钮 (<span id="val-back-size">18</span>px)</label>
-                            <input type="range" id="ctrl-back-size" min="10" max="40" value="18" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>菜单按钮 (<span id="val-menu-size">18</span>px)</label>
-                            <input type="range" id="ctrl-menu-size" min="10" max="40" value="18" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>左侧加号 (<span id="val-plus-size">24</span>px)</label>
-                            <input type="range" id="ctrl-plus-size" min="10" max="40" value="24" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>右侧表情 (<span id="val-emoji-size">24</span>px)</label>
-                            <input type="range" id="ctrl-emoji-size" min="10" max="40" value="24" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>发送按钮 (<span id="val-send-size">24</span>px)</label>
-                            <input type="range" id="ctrl-send-size" min="10" max="40" value="24" style="width: 100%;">
-                        </div>
-
-                        <div class="section-title" style="margin-top: 20px;">按钮位置微调 (X, Y)</div>
-                        
-                        <div class="setting-group">
-                            <label>返回按钮 (<span id="val-back-x">0</span>, <span id="val-back-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-back-x" min="-20" max="20" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-back-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>菜单按钮 (<span id="val-menu-x">0</span>, <span id="val-menu-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-menu-x" min="-20" max="20" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-menu-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>左侧加号 (<span id="val-plus-x">0</span>, <span id="val-plus-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-plus-x" min="-20" max="20" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-plus-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>右侧表情 (<span id="val-emoji-x">0</span>, <span id="val-emoji-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-emoji-x" min="-20" max="20" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-emoji-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>发送按钮 (<span id="val-send-x">0</span>, <span id="val-send-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-send-x" min="-20" max="20" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-send-y" min="-20" max="20" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-
-                        <div class="setting-group" style="margin-top: 20px; display: flex; gap: 10px;">
-                            <button id="apply-to-global-btn" class="ios-btn-block" style="background-color: #007AFF; flex: 1;">应用到全局</button>
-                            <button id="reset-theme-btn" class="ios-btn-block danger" style="flex: 1;">重置全部</button>
+                        <div class="setting-group" style="margin-top: 20px;">
+                            <button id="reset-theme-btn" class="ios-btn-block danger">重置全部</button>
                         </div>
                     </div>
 
@@ -1649,255 +1557,6 @@
                         </div>
                     </div>
 
-                    <!-- 控件区域 (第三部分：颜色主题/转账) -->
-                    <div id="controls-section-3" class="customize-section hidden">
-                        <!-- 转账卡片子导航 -->
-                        <div id="transfer-sub-nav" style="display: flex; justify-content: center; margin-bottom: 15px; background: #f2f2f7; padding: 4px; border-radius: 8px;">
-                            <div class="sub-nav-item active" data-target="normal" style="flex: 1; text-align: center; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; color: #000;">普通</div>
-                            <div class="sub-nav-item" data-target="accepted" style="flex: 1; text-align: center; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 14px; color: #666;">已收款</div>
-                        </div>
-
-                        <div id="transfer-controls-normal">
-                        <div class="section-title">转账卡片样式</div>
-                        <div class="setting-group">
-                            <div style="display: flex; gap: 10px;">
-                                <div style="flex: 1;">
-                                    <label>背景颜色</label>
-                                    <input type="color" id="ctrl-transfer-bg" value="#FFFFFF" style="width: 100%; height: 40px;">
-                                </div>
-                                <div style="flex: 1;">
-                                    <label>文字颜色</label>
-                                    <input type="color" id="ctrl-transfer-text" value="#000000" style="width: 100%; height: 40px;">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>圆角 (单值保留以兼容旧设置，或单独设置四角)</label>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="range" id="ctrl-transfer-radius" min="0" max="60" value="12" style="flex:1;">
-                                <span id="val-transfer-radius">12</span>px
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>圆角（四角单独设置）</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div><label style="font-size:12px">左上 (<span id="val-transfer-radius-tl">12</span>px)</label><input type="range" id="ctrl-transfer-radius-tl" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">右上 (<span id="val-transfer-radius-tr">12</span>px)</label><input type="range" id="ctrl-transfer-radius-tr" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">右下 (<span id="val-transfer-radius-br">12</span>px)</label><input type="range" id="ctrl-transfer-radius-br" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">左下 (<span id="val-transfer-radius-bl">12</span>px)</label><input type="range" id="ctrl-transfer-radius-bl" min="0" max="60" value="12"></div>
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>宽度 (<span id="val-transfer-width">240</span>px)</label>
-                            <input type="range" id="ctrl-transfer-width" min="50" max="300" value="240" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>高度 (<span id="val-transfer-height">80</span>px)</label>
-                            <input type="range" id="ctrl-transfer-height" min="50" max="300" value="80" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标背景色</label>
-                            <input type="color" id="ctrl-transfer-icon-bg" value="#000000" style="width: 100%; height: 40px;">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标颜色</label>
-                            <input type="color" id="ctrl-transfer-icon-color" value="#FFFFFF" style="width: 100%; height: 40px;">
-                        </div>
-                        <div class="setting-group">
-                            <label>自定义图标 URL</label>
-                            <input type="url" id="ctrl-transfer-icon-url" placeholder="https://...">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标背景位置偏移 (<span id="val-transfer-icon-x">0</span>, <span id="val-transfer-icon-y">0</span>)</label>
-                            <div style="display:flex; gap:10px;">
-                                <input type="range" id="ctrl-transfer-icon-x" min="-100" max="100" value="0" style="flex:1;">
-                                <input type="range" id="ctrl-transfer-icon-y" min="-100" max="100" value="0" style="flex:1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>图标内容位置偏移 (<span id="val-transfer-icon-inner-x">0</span>, <span id="val-transfer-icon-inner-y">0</span>)</label>
-                            <div style="display:flex; gap:10px; transform: translate(11px, 6px);">
-                                <input type="range" id="ctrl-transfer-icon-inner-x" min="-50" max="50" value="0" style="flex:1;">
-                                <input type="range" id="ctrl-transfer-icon-inner-y" min="-50" max="50" value="0" style="flex:1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>图标大小 (<span id="val-transfer-icon-size">24</span>px)</label>
-                            <input type="range" id="ctrl-transfer-icon-size" min="8" max="80" value="24" style="width:100%;">
-                        </div>
-
-                        <div class="section-title" style="margin-top: 20px;">文本位置与内容</div>
-                        
-                        <div class="setting-group">
-                            <label>金额位置偏移 (<span id="val-transfer-amount-x">0</span>, <span id="val-transfer-amount-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-amount-x" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-amount-y" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-
-                        <div class="setting-group">
-                            <label>备注位置偏移 (<span id="val-transfer-remark-x">0</span>, <span id="val-transfer-remark-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-remark-x" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-remark-y" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>备注内容 (预览)</label>
-                            <input type="text" id="ctrl-transfer-remark-text" placeholder="转账给你">
-                        </div>
-
-                        <div class="setting-group">
-                            <label>描述位置偏移 (<span id="val-transfer-desc-x">0</span>, <span id="val-transfer-desc-y">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-desc-x" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-desc-y" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>描述内容 (预览)</label>
-                            <input type="text" id="ctrl-transfer-desc-text" placeholder="微信转账">
-                        </div>
-                        <div class="setting-group">
-                            <label>描述文字颜色</label>
-                            <input type="color" id="ctrl-transfer-desc-color" value="#000000" style="width: 100%; height: 40px;">
-                        </div>
-
-
-                        </div>
-
-                        <!-- 已收款 单独自定义分组 -->
-                        <div id="transfer-controls-accepted" class="hidden">
-                        <div class="section-title" style="margin-top: 10px;">已收款 卡片自定义</div>
-                        <div id="transfer-accepted-controls">
-                        <div class="setting-group">
-                            <div style="display: flex; gap: 10px;">
-                                <div style="flex: 1;">
-                                    <label>背景颜色 (已收款)</label>
-                                    <input type="color" id="ctrl-transfer-bg-accepted" value="#FFFFFF" style="width: 100%; height: 40px;">
-                                </div>
-                                <div style="flex: 1;">
-                                    <label>文字颜色 (已收款)</label>
-                                    <input type="color" id="ctrl-transfer-text-accepted" value="#000000" style="width: 100%; height: 40px;">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>圆角 (单值兼容，已收款)</label>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="range" id="ctrl-transfer-radius-accepted" min="0" max="60" value="12" style="flex:1;">
-                                <span id="val-transfer-radius-accepted">12</span>px
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>圆角（四角单独设置，已收款）</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div><label style="font-size:12px">左上 (<span id="val-transfer-radius-tl-accepted">12</span>px)</label><input type="range" id="ctrl-transfer-radius-tl-accepted" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">右上 (<span id="val-transfer-radius-tr-accepted">12</span>px)</label><input type="range" id="ctrl-transfer-radius-tr-accepted" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">右下 (<span id="val-transfer-radius-br-accepted">12</span>px)</label><input type="range" id="ctrl-transfer-radius-br-accepted" min="0" max="60" value="12"></div>
-                                <div><label style="font-size:12px">左下 (<span id="val-transfer-radius-bl-accepted">12</span>px)</label><input type="range" id="ctrl-transfer-radius-bl-accepted" min="0" max="60" value="12"></div>
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>宽度 (已收款) (<span id="val-transfer-width-accepted">240</span>px)</label>
-                            <input type="range" id="ctrl-transfer-width-accepted" min="120" max="520" value="240" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>高度 (已收款) (<span id="val-transfer-height-accepted">80</span>px)</label>
-                            <input type="range" id="ctrl-transfer-height-accepted" min="80" max="400" value="80" style="width: 100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标背景色 (已收款)</label>
-                            <input type="color" id="ctrl-transfer-icon-bg-accepted" value="#000000" style="width: 100%; height: 40px;">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标颜色 (已收款)</label>
-                            <input type="color" id="ctrl-transfer-icon-color-accepted" value="#FFFFFF" style="width: 100%; height: 40px;">
-                        </div>
-                        <div class="setting-group">
-                            <label>自定义图标 URL (已收款)</label>
-                            <input type="url" id="ctrl-transfer-icon-url-accepted" placeholder="https://...">
-                        </div>
-                        <div class="setting-group">
-                            <label>图标背景位置偏移 (已收款) (<span id="val-transfer-icon-x-accepted">0</span>, <span id="val-transfer-icon-y-accepted">0</span>)</label>
-                            <div style="display:flex; gap:10px;">
-                                <input type="range" id="ctrl-transfer-icon-x-accepted" min="-100" max="100" value="0" style="flex:1;">
-                                <input type="range" id="ctrl-transfer-icon-y-accepted" min="-100" max="100" value="0" style="flex:1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>图标内容位置偏移 (已收款) (<span id="val-transfer-icon-inner-x-accepted">0</span>, <span id="val-transfer-icon-inner-y-accepted">0</span>)</label>
-                            <div style="display: flex; gap:10px;">
-                                <input type="range" id="ctrl-transfer-icon-inner-x-accepted" min="-50" max="50" value="0" style="flex:1;">
-                                <input type="range" id="ctrl-transfer-icon-inner-y-accepted" min="-50" max="50" value="0" style="flex:1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>图标大小 (已收款) (<span id="val-transfer-icon-size-accepted">24</span>px)</label>
-                            <input type="range" id="ctrl-transfer-icon-size-accepted" min="8" max="80" value="24" style="width:100%;">
-                        </div>
-
-                        <div class="section-title" style="margin-top: 20px;">文本位置与内容 (已收款)</div>
-                        
-                        <div class="setting-group">
-                            <label>金额位置偏移 (已收款) (<span id="val-transfer-amount-x-accepted">0</span>, <span id="val-transfer-amount-y-accepted">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-amount-x-accepted" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-amount-y-accepted" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-
-                        <div class="setting-group">
-                            <label>备注位置偏移 (已收款) (<span id="val-transfer-remark-x-accepted">0</span>, <span id="val-transfer-remark-y-accepted">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-remark-x-accepted" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-remark-y-accepted" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>备注内容 (已收款 预览)</label>
-                            <input type="text" id="ctrl-transfer-remark-text-accepted" placeholder="已收款">
-                        </div>
-
-                        <div class="setting-group">
-                            <label>描述位置偏移 (已收款) (<span id="val-transfer-desc-x-accepted">0</span>, <span id="val-transfer-desc-y-accepted">0</span>)</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="range" id="ctrl-transfer-desc-x-accepted" min="-200" max="200" value="0" style="flex: 1;">
-                                <input type="range" id="ctrl-transfer-desc-y-accepted" min="-100" max="100" value="0" style="flex: 1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>描述内容 (已收款 预览)</label>
-                            <input type="text" id="ctrl-transfer-desc-text-accepted" placeholder="已通过转账">
-                        </div>
-                        <div class="setting-group">
-                            <label>描述文字颜色 (已收款)</label>
-                            <input type="color" id="ctrl-transfer-desc-color-accepted" value="#000000" style="width: 100%; height: 40px;">
-                        </div>
-
-                        <div class="setting-group">
-                            <label>底部灰条位置偏移 (已收款) (<span id="val-transfer-bottom-x-accepted">0</span>, <span id="val-transfer-bottom-y-accepted">0</span>)</label>
-                            <div style="display:flex; gap:10px;">
-                                <input type="range" id="ctrl-transfer-bottom-x-accepted" min="-200" max="200" value="0" style="flex:1;">
-                                <input type="range" id="ctrl-transfer-bottom-y-accepted" min="-100" max="100" value="0" style="flex:1;">
-                            </div>
-                        </div>
-                        <div class="setting-group">
-                            <label>底部灰条背景色 (已收款)</label>
-                            <input type="color" id="ctrl-transfer-bottom-bg-accepted" value="#f2f2f7" style="width:100%; height:40px;">
-                        </div>
-                        <div class="setting-group">
-                            <label>底部灰条宽度 (已收款) (<span id="val-transfer-bottom-width-accepted">100</span>%)</label>
-                            <input type="range" id="ctrl-transfer-bottom-width-accepted" min="10" max="150" value="100" style="width:100%;">
-                        </div>
-                        <div class="setting-group">
-                            <label>底部灰条高度 (已收款) (<span id="val-transfer-bottom-height-accepted">40</span>px)</label>
-                            <input type="range" id="ctrl-transfer-bottom-height-accepted" min="0" max="200" value="40" style="width:100%;">
-                        </div>
-                        </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- 3. 底部：CSS代码展示 -->
@@ -2102,6 +1761,101 @@
         </div>
     </div>
     
+    <!-- 音乐设置弹窗 -->
+    <div id="music-settings-modal" class="modal hidden">
+        <div class="modal-content" style="height: 85vh;">
+            <div class="modal-header">
+                <h3>音乐设置</h3>
+                <button class="close-btn" id="close-music-settings">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0; display: flex; flex-direction: column;">
+                
+                <!-- 上半部分：外观设置 -->
+                <div style="padding: 20px; border-bottom: 1px solid #eee; background-color: #fff;">
+                    <div class="section-title" style="margin-left: 0; margin-bottom: 15px;">外观设置</div>
+                    <div style="display: flex; gap: 20px; justify-content: center;">
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <label style="margin-bottom: 10px; font-size: 13px; color: #888;">当前封面</label>
+                            <div class="avatar-upload-container" style="margin-bottom: 10px;">
+                                <div class="avatar-preview" id="music-cover-preview">
+                                    <i class="fas fa-camera"></i>
+                                </div>
+                                <input type="file" id="music-cover-upload" accept="image/*" class="file-input-hidden">
+                            </div>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <label style="margin-bottom: 10px; font-size: 13px; color: #888;">组件背景</label>
+                            <div class="avatar-upload-container" style="margin-bottom: 10px;">
+                                <div class="avatar-preview" id="music-widget-bg-preview" style="border-radius: 12px;">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                                <input type="file" id="music-widget-bg-upload" accept="image/*" class="file-input-hidden">
+                            </div>
+                        </div>
+                    </div>
+                    <button id="save-music-appearance" class="ios-btn-block" style="margin-top: 0;">保存外观</button>
+                </div>
+
+                <!-- 下半部分：歌曲管理 -->
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background-color: #f2f2f7;">
+                    <!-- 导航栏 -->
+                    <div class="chat-settings-nav" style="margin: 10px 16px; background-color: #fff;">
+                        <div class="nav-item active" id="tab-music-list">歌曲列表</div>
+                        <div class="nav-item" id="tab-music-upload">上传歌曲</div>
+                        <div class="nav-indicator" id="music-nav-indicator" style="width: calc(50% - 4px);"></div>
+                    </div>
+
+                    <!-- 歌曲列表页 -->
+                    <div id="music-view-list" class="music-tab-content active" style="flex: 1; overflow-y: auto; padding: 0 16px 20px;">
+                        <div class="ios-list-group" id="music-playlist">
+                            <!-- 歌曲列表项 -->
+                        </div>
+                        <div class="empty-state" id="music-empty-state" style="display: none;">暂无歌曲</div>
+                    </div>
+
+                    <!-- 上传歌曲页 -->
+                    <div id="music-view-upload" class="music-tab-content" style="flex: 1; overflow-y: auto; padding: 0 16px 20px; display: none;">
+                        <div class="ios-list-group">
+                            <div class="list-item">
+                                <div class="list-content column">
+                                    <label>歌曲文件</label>
+                                    <div class="input-row full-width">
+                                        <button id="upload-music-btn" class="ios-btn-block secondary">选择文件</button>
+                                        <input type="file" id="music-file-upload" accept="audio/*" class="file-input-hidden">
+                                    </div>
+                                    <input type="text" id="music-url-input" placeholder="或输入歌曲 URL" style="margin-top: 10px;">
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content column">
+                                    <label>基本信息</label>
+                                    <input type="text" id="input-song-title" placeholder="歌名">
+                                    <input type="text" id="input-artist-name" placeholder="歌手" style="margin-top: 10px;">
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content column">
+                                    <label>歌词 (.lrc)</label>
+                                    <div class="input-row full-width">
+                                        <button id="upload-lyrics-btn" class="ios-btn-block secondary">选择歌词文件</button>
+                                        <input type="file" id="lyrics-file-upload" accept=".lrc" class="file-input-hidden">
+                                    </div>
+                                    <div id="lyrics-status" style="font-size: 12px; color: #888; margin-top: 5px;">未选择文件</div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <button id="save-new-song" class="ios-btn-block">添加到列表并播放</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音频元素 -->
+    <audio id="bg-music" loop></audio>
+
     <!-- 引入 localForage 用于存储大文件 (可选，如果需要) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="script.js"></script>

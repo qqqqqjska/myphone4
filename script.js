@@ -30,7 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
         aiPresets2: [],
         chatWallpapers: [], // { id, data }
         tempSelectedChatBg: null, // 临时存储聊天设置中选中的背景
-        contacts: [], // { id, name, remark, avatar, persona, style, myAvatar, chatBg }
+        tempSelectedGroup: null, // 临时存储聊天设置中选中的分组
+        contacts: [], // { id, name, remark, avatar, persona, style, myAvatar, chatBg, group }
+        contactGroups: [], // ['分组1', '分组2']
         currentChatContactId: null,
         chatHistory: {}, // { contactId: [{ role: 'user'|'assistant', content: '...' }] }
         worldbook: [], // { id, categoryId, keys: [], content: '', enabled: true, remark: '' }
@@ -52,6 +54,28 @@ document.addEventListener('DOMContentLoaded', () => {
         wallet: {
             balance: 0.00,
             transactions: [] // { id, type: 'income'|'expense', amount, title, time, relatedId }
+        },
+        music: {
+            playing: false,
+            cover: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            src: '',
+            title: 'Happy Together',
+            artist: 'Maximillian',
+            lyricsData: [
+                { time: 0, text: "So fast, I almost missed it" },
+                { time: 3, text: "I spill another glass of wine" },
+                { time: 6, text: "Kill the lights to pass the time" }
+            ],
+            lyricsFile: '',
+            widgetBg: '',
+            playlist: [], // { id, title, artist, src, lyricsData, lyricsFile }
+            currentSongId: null
+        },
+        polaroid: {
+            img1: 'https://placehold.co/300x300/eee/999?text=Photo',
+            text1: '讨厌坏天气',
+            img2: 'https://placehold.co/300x300/eee/999?text=Photo',
+            text2: '美好回忆'
         },
         stickerCategories: [], // { id, name, list: [{ url, desc }] }
         currentStickerCategoryId: 'all',
@@ -97,6 +121,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const worldbookDetailScreen = document.getElementById('worldbook-detail-screen');
     const backToWorldbookListBtn = document.getElementById('back-to-worldbook-list');
     
+    // 音乐组件相关
+    const musicWidget = document.getElementById('music-widget');
+    const musicSettingsModal = document.getElementById('music-settings-modal');
+    const closeMusicSettingsBtn = document.getElementById('close-music-settings');
+    
+    // 音乐设置新元素
+    const saveMusicAppearanceBtn = document.getElementById('save-music-appearance');
+    const saveNewSongBtn = document.getElementById('save-new-song');
+    
+    const tabMusicList = document.getElementById('tab-music-list');
+    const tabMusicUpload = document.getElementById('tab-music-upload');
+    const musicViewList = document.getElementById('music-view-list');
+    const musicViewUpload = document.getElementById('music-view-upload');
+    const musicNavIndicator = document.getElementById('music-nav-indicator');
+
+    const musicCoverUpload = document.getElementById('music-cover-upload');
+    const musicWidgetBgUpload = document.getElementById('music-widget-bg-upload');
+    const musicFileUpload = document.getElementById('music-file-upload');
+    const uploadMusicBtn = document.getElementById('upload-music-btn');
+    const lyricsFileUpload = document.getElementById('lyrics-file-upload');
+    const uploadLyricsBtn = document.getElementById('upload-lyrics-btn');
+    const bgMusicAudio = document.getElementById('bg-music');
+
+    // 拍立得组件相关
+    const polaroidWidget = document.getElementById('polaroid-widget');
+    const polaroidImg1 = document.getElementById('polaroid-img-1');
+    const polaroidText1 = document.getElementById('polaroid-text-1');
+    const polaroidInput1 = document.getElementById('polaroid-input-1');
+    const polaroidImg2 = document.getElementById('polaroid-img-2');
+    const polaroidText2 = document.getElementById('polaroid-text-2');
+    const polaroidInput2 = document.getElementById('polaroid-input-2');
+
     const screenContainer = document.getElementById('screen-container');
 
     // 应用列表配置
@@ -196,6 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('应用配置失败:', e);
         }
         
+        initMusicWidget();
+        initPolaroidWidget();
+
         renderIconPresets();
         renderFontPresets();
         renderCssPresets();
@@ -293,24 +352,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } else if (tab === 'contacts') {
-            if (title) title.textContent = '通讯录';
+            // 联系人页面使用自定义 Header，隐藏通用 Header
+            header.style.display = 'none';
             
-            // 左侧：关闭
-            if (left) {
-                const closeBtn = document.createElement('div');
-                closeBtn.className = 'header-btn-text';
-                closeBtn.textContent = '关闭';
-                closeBtn.onclick = closeApp;
-                left.appendChild(closeBtn);
+            // 绑定自定义 Header 中的按钮事件
+            const addBtnCustom = document.getElementById('add-contact-btn-custom');
+            if (addBtnCustom) {
+                // 移除旧的监听器 (通过克隆)
+                const newBtn = addBtnCustom.cloneNode(true);
+                addBtnCustom.parentNode.replaceChild(newBtn, addBtnCustom);
+                newBtn.addEventListener('click', () => document.getElementById('add-contact-modal').classList.remove('hidden'));
             }
 
-            // 右侧：加号 (添加联系人)
-            if (right) {
-                const addBtn = document.createElement('div');
-                addBtn.className = 'wechat-icon-btn';
-                addBtn.innerHTML = '<i class="fas fa-user-plus"></i>';
-                addBtn.onclick = () => document.getElementById('add-contact-modal').classList.remove('hidden');
-                right.appendChild(addBtn);
+            // 绑定返回按钮 (关闭微信App)
+            const backBtnCustom = document.getElementById('contacts-back-btn');
+            if (backBtnCustom) {
+                const newBackBtn = backBtnCustom.cloneNode(true);
+                backBtnCustom.parentNode.replaceChild(newBackBtn, backBtnCustom);
+                newBackBtn.addEventListener('click', closeApp);
             }
 
         } else if (tab === 'moments') {
@@ -511,20 +570,57 @@ document.addEventListener('DOMContentLoaded', () => {
         
         wechatTabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                wechatTabs.forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.wechat-tab-content').forEach(c => c.classList.remove('active'));
-                
-                tab.classList.add('active');
-                const tabName = tab.dataset.tab;
-                document.getElementById(`wechat-tab-${tabName}`).classList.add('active');
+                const currentActiveTab = document.querySelector('.wechat-tab-item.active');
+                if (currentActiveTab === tab) return; // 点击当前tab不做处理
 
-                // 更新 Header
-                updateWechatHeader(tabName);
+                const currentContent = document.querySelector('.wechat-tab-content.active');
+                const tabName = tab.dataset.tab;
+                const nextContent = document.getElementById(`wechat-tab-${tabName}`);
+                const header = document.querySelector('.wechat-header');
+
+                // 1. 切换 Tab 按钮状态
+                wechatTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // 2. 内容切换动画：先淡出当前内容 和 Header
+                if (currentContent) {
+                    currentContent.classList.add('fade-out');
+                    if (header) header.classList.add('fade-out');
+                    
+                    setTimeout(() => {
+                        currentContent.classList.remove('active');
+                        currentContent.classList.remove('fade-out');
+                        
+                        // 3. 显示新内容（初始透明）
+                        if (nextContent) {
+                            nextContent.style.opacity = '0'; // 确保初始透明
+                            nextContent.classList.add('active');
+                            // 强制重绘
+                            void nextContent.offsetWidth;
+                            // 4. 淡入新内容
+                            nextContent.style.opacity = '1'; 
+                        }
+                        
+                        // 更新 Header
+                        updateWechatHeader(tabName);
+                        if (header) header.classList.remove('fade-out');
+
+                    }, 150); // 等待淡出动画结束
+                } else {
+                    // 如果没有当前内容，直接显示新的
+                    if (nextContent) {
+                        nextContent.style.opacity = '0';
+                        nextContent.classList.add('active');
+                        void nextContent.offsetWidth;
+                        nextContent.style.opacity = '1';
+                    }
+                    updateWechatHeader(tabName);
+                }
             });
         });
 
         // 初始化 Header
-        updateWechatHeader('wechat');
+        updateWechatHeader('contacts');
 
         // 微信添加联系人
         const addContactModal = document.getElementById('add-contact-modal');
@@ -568,6 +664,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const saveChatSettingsBtn = document.getElementById('save-chat-settings-btn');
         const triggerAiMomentBtn = document.getElementById('trigger-ai-moment-btn');
         
+        // 分组设置
+        const chatSettingGroupTrigger = document.getElementById('chat-setting-group-trigger');
+        const groupSelectModal = document.getElementById('group-select-modal');
+        const closeGroupSelectBtn = document.getElementById('close-group-select');
+        const createGroupBtn = document.getElementById('create-group-btn');
+
+        if (chatSettingGroupTrigger) chatSettingGroupTrigger.addEventListener('click', openGroupSelect);
+        if (closeGroupSelectBtn) closeGroupSelectBtn.addEventListener('click', () => groupSelectModal.classList.add('hidden'));
+        if (createGroupBtn) createGroupBtn.addEventListener('click', handleCreateGroup);
+
         // 聊天背景设置
         const chatSettingBgInput = document.getElementById('chat-setting-bg');
         if (chatSettingBgInput) chatSettingBgInput.addEventListener('change', handleChatWallpaperUpload);
@@ -634,18 +740,42 @@ document.addEventListener('DOMContentLoaded', () => {
         
         chatSettingTabs.forEach((tab, index) => {
             tab.addEventListener('click', () => {
-                // 移除所有 active
-                chatSettingTabs.forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.chat-setting-tab-content').forEach(c => c.classList.remove('active'));
-                
-                // 激活当前
-                tab.classList.add('active');
+                if (tab.classList.contains('active')) return;
+
+                const currentContent = document.querySelector('.chat-setting-tab-content.active');
                 const tabName = tab.dataset.tab;
-                document.getElementById(`chat-setting-tab-${tabName}`).classList.add('active');
+                const nextContent = document.getElementById(`chat-setting-tab-${tabName}`);
+
+                // 切换 Tab 按钮状态
+                chatSettingTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
                 
                 // 移动指示器
                 if (chatSettingIndicator) {
                     chatSettingIndicator.style.transform = `translateX(${index * 100}%)`;
+                }
+
+                // 切换内容动画
+                if (currentContent) {
+                    currentContent.classList.add('fade-out');
+                    setTimeout(() => {
+                        currentContent.classList.remove('active');
+                        currentContent.classList.remove('fade-out');
+                        
+                        if (nextContent) {
+                            nextContent.style.opacity = '0';
+                            nextContent.classList.add('active');
+                            void nextContent.offsetWidth; // 强制重绘
+                            nextContent.style.opacity = '1';
+                        }
+                    }, 150);
+                } else {
+                    if (nextContent) {
+                        nextContent.style.opacity = '0';
+                        nextContent.classList.add('active');
+                        void nextContent.offsetWidth;
+                        nextContent.style.opacity = '1';
+                    }
                 }
             });
         });
@@ -1091,6 +1221,566 @@ document.addEventListener('DOMContentLoaded', () => {
                 themeCustomizerApp.classList.add('hidden');
             });
         }
+
+        // 音乐组件事件
+        if (musicWidget) {
+            musicWidget.addEventListener('click', (e) => {
+                // 如果点击的是播放按钮，则切换播放状态
+                if (e.target.id === 'play-icon' || e.target.closest('.music-controls-mini')) {
+                    e.stopPropagation();
+                    toggleMusicPlay();
+                } else {
+                    openMusicSettings();
+                }
+            });
+        }
+
+        if (closeMusicSettingsBtn) closeMusicSettingsBtn.addEventListener('click', () => musicSettingsModal.classList.add('hidden'));
+        
+        if (saveMusicAppearanceBtn) saveMusicAppearanceBtn.addEventListener('click', saveMusicAppearance);
+        if (saveNewSongBtn) saveNewSongBtn.addEventListener('click', saveNewSong);
+
+        if (tabMusicList) tabMusicList.addEventListener('click', () => switchMusicTab('list'));
+        if (tabMusicUpload) tabMusicUpload.addEventListener('click', () => switchMusicTab('upload'));
+        
+        if (uploadMusicBtn && musicFileUpload) {
+            uploadMusicBtn.addEventListener('click', () => musicFileUpload.click());
+            musicFileUpload.addEventListener('change', handleMusicFileUpload);
+        }
+
+        if (musicCoverUpload) {
+            const preview = document.getElementById('music-cover-preview');
+            if (preview) preview.addEventListener('click', () => musicCoverUpload.click());
+            musicCoverUpload.addEventListener('change', handleMusicCoverUpload);
+        }
+
+        if (musicWidgetBgUpload) {
+            const preview = document.getElementById('music-widget-bg-preview');
+            if (preview) preview.addEventListener('click', () => musicWidgetBgUpload.click());
+            musicWidgetBgUpload.addEventListener('change', handleMusicWidgetBgUpload);
+        }
+
+        if (uploadLyricsBtn && lyricsFileUpload) {
+            uploadLyricsBtn.addEventListener('click', () => lyricsFileUpload.click());
+            lyricsFileUpload.addEventListener('change', handleLyricsUpload);
+        }
+
+        // 拍立得组件事件
+        if (polaroidWidget) {
+            // 图片点击上传
+            if (polaroidImg1) {
+                polaroidImg1.parentElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    polaroidInput1.click();
+                });
+            }
+            if (polaroidImg2) {
+                polaroidImg2.parentElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    polaroidInput2.click();
+                });
+            }
+
+            // 文字点击编辑
+            if (polaroidText1) {
+                polaroidText1.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handlePolaroidTextEdit(1);
+                });
+            }
+            if (polaroidText2) {
+                polaroidText2.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handlePolaroidTextEdit(2);
+                });
+            }
+
+            // 文件输入监听
+            if (polaroidInput1) polaroidInput1.addEventListener('change', (e) => handlePolaroidImageUpload(e, 1));
+            if (polaroidInput2) polaroidInput2.addEventListener('change', (e) => handlePolaroidImageUpload(e, 2));
+        }
+    }
+
+    // --- 拍立得组件功能 ---
+    function initPolaroidWidget() {
+        if (state.polaroid) {
+            if (polaroidImg1) polaroidImg1.src = state.polaroid.img1;
+            if (polaroidText1) polaroidText1.textContent = state.polaroid.text1;
+            if (polaroidImg2) polaroidImg2.src = state.polaroid.img2;
+            if (polaroidText2) polaroidText2.textContent = state.polaroid.text2;
+        }
+    }
+
+    function handlePolaroidImageUpload(e, index) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        compressImage(file, 600, 0.7).then(base64 => {
+            if (index === 1) {
+                state.polaroid.img1 = base64;
+                if (polaroidImg1) polaroidImg1.src = base64;
+            } else {
+                state.polaroid.img2 = base64;
+                if (polaroidImg2) polaroidImg2.src = base64;
+            }
+            saveConfig();
+        }).catch(err => {
+            console.error('图片压缩失败', err);
+        });
+        e.target.value = '';
+    }
+
+    function handlePolaroidTextEdit(index) {
+        const currentText = index === 1 ? state.polaroid.text1 : state.polaroid.text2;
+        const newText = prompt('请输入文字：', currentText);
+        
+        if (newText !== null) {
+            if (index === 1) {
+                state.polaroid.text1 = newText;
+                if (polaroidText1) polaroidText1.textContent = newText;
+            } else {
+                state.polaroid.text2 = newText;
+                if (polaroidText2) polaroidText2.textContent = newText;
+            }
+            saveConfig();
+        }
+    }
+
+    // --- 音乐组件功能 ---
+    function initMusicWidget() {
+        if (state.music) {
+            updateMusicUI();
+            if (state.music.src) {
+                bgMusicAudio.src = state.music.src;
+            }
+        }
+        
+        // 绑定歌词同步
+        bgMusicAudio.addEventListener('timeupdate', syncLyrics);
+        bgMusicAudio.addEventListener('ended', () => {
+            state.music.playing = false;
+            updateMusicUI();
+        });
+    }
+
+    function openMusicSettings() {
+        // 填充外观设置
+        const coverPreview = document.getElementById('music-cover-preview');
+        if (coverPreview && state.music.cover) {
+            coverPreview.innerHTML = `<img src="${state.music.cover}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        }
+
+        const bgPreview = document.getElementById('music-widget-bg-preview');
+        if (bgPreview) {
+            if (state.music.widgetBg) {
+                bgPreview.innerHTML = `<img src="${state.music.widgetBg}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            } else {
+                bgPreview.innerHTML = '<i class="fas fa-image"></i>';
+            }
+        }
+
+        // 重置上传表单
+        resetMusicUploadForm();
+        
+        // 渲染歌曲列表
+        renderMusicPlaylist();
+        
+        // 默认显示列表页
+        switchMusicTab('list');
+
+        musicSettingsModal.classList.remove('hidden');
+    }
+
+    function switchMusicTab(tab) {
+        const listTab = document.getElementById('tab-music-list');
+        const uploadTab = document.getElementById('tab-music-upload');
+        const listView = document.getElementById('music-view-list');
+        const uploadView = document.getElementById('music-view-upload');
+        const indicator = document.getElementById('music-nav-indicator');
+
+        if (tab === 'list') {
+            listTab.classList.add('active');
+            uploadTab.classList.remove('active');
+            
+            listView.style.display = 'block';
+            uploadView.style.display = 'none';
+            
+            // 强制重绘以触发过渡
+            void listView.offsetWidth;
+            
+            listView.classList.add('active');
+            uploadView.classList.remove('active');
+            
+            indicator.style.transform = 'translateX(0)';
+        } else {
+            listTab.classList.remove('active');
+            uploadTab.classList.add('active');
+            
+            listView.style.display = 'none';
+            uploadView.style.display = 'block';
+            
+            // 强制重绘以触发过渡
+            void uploadView.offsetWidth;
+            
+            listView.classList.remove('active');
+            uploadView.classList.add('active');
+            
+            indicator.style.transform = 'translateX(100%)';
+        }
+    }
+
+    function resetMusicUploadForm() {
+        document.getElementById('input-song-title').value = '';
+        document.getElementById('input-artist-name').value = '';
+        document.getElementById('music-url-input').value = '';
+        document.getElementById('music-file-upload').value = '';
+        document.getElementById('lyrics-file-upload').value = '';
+        document.getElementById('lyrics-status').textContent = '未选择文件';
+        
+        state.tempMusicSrc = null;
+        state.tempLyricsData = null;
+        state.tempLyricsFile = null;
+    }
+
+    function handleMusicCoverUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        compressImage(file, 300, 0.7).then(base64 => {
+            const preview = document.getElementById('music-cover-preview');
+            if (preview) {
+                preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
+            // 暂存，点击保存时才应用到 state
+            state.tempMusicCover = base64;
+        }).catch(err => {
+            console.error('图片压缩失败', err);
+        });
+    }
+
+    function handleMusicWidgetBgUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        compressImage(file, 800, 0.7).then(base64 => {
+            const preview = document.getElementById('music-widget-bg-preview');
+            if (preview) {
+                preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
+            state.tempMusicWidgetBg = base64;
+        }).catch(err => {
+            console.error('图片压缩失败', err);
+        });
+    }
+
+    function handleMusicFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            state.tempMusicSrc = event.target.result;
+            alert('音乐文件已选择，点击保存生效');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleLyricsUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const lrcContent = event.target.result;
+            const parsedLyrics = parseLRC(lrcContent);
+            
+            if (parsedLyrics.length > 0) {
+                state.tempLyricsData = parsedLyrics;
+                state.tempLyricsFile = file.name;
+                document.getElementById('lyrics-status').textContent = `已选择: ${file.name}`;
+            } else {
+                alert('歌词解析失败，请检查文件格式');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function parseLRC(lrc) {
+        const lines = lrc.split('\n');
+        const result = [];
+        const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/;
+
+        lines.forEach(line => {
+            const match = timeRegex.exec(line);
+            if (match) {
+                const minutes = parseInt(match[1]);
+                const seconds = parseInt(match[2]);
+                const milliseconds = match[3] ? parseInt(match[3].padEnd(3, '0')) : 0;
+                const time = minutes * 60 + seconds + milliseconds / 1000;
+                const text = line.replace(timeRegex, '').trim();
+                
+                if (text) {
+                    result.push({ time, text });
+                }
+            }
+        });
+
+        return result.sort((a, b) => a.time - b.time);
+    }
+
+    function saveMusicAppearance() {
+        if (state.tempMusicCover) {
+            state.music.cover = state.tempMusicCover;
+            delete state.tempMusicCover;
+        }
+
+        if (state.tempMusicWidgetBg) {
+            state.music.widgetBg = state.tempMusicWidgetBg;
+            delete state.tempMusicWidgetBg;
+        }
+
+        updateMusicUI();
+        saveConfig();
+        alert('外观设置已保存');
+    }
+
+    function saveNewSong() {
+        const title = document.getElementById('input-song-title').value.trim();
+        const artist = document.getElementById('input-artist-name').value.trim();
+        const urlInput = document.getElementById('music-url-input').value.trim();
+
+        if (!title) {
+            alert('请输入歌名');
+            return;
+        }
+
+        let src = '';
+        if (state.tempMusicSrc) {
+            src = state.tempMusicSrc;
+        } else if (urlInput) {
+            src = urlInput;
+        } else {
+            alert('请上传音乐文件或输入URL');
+            return;
+        }
+
+        const newSong = {
+            id: Date.now(),
+            title: title,
+            artist: artist || '未知歌手',
+            src: src,
+            lyricsData: state.tempLyricsData || [],
+            lyricsFile: state.tempLyricsFile || ''
+        };
+
+        if (!state.music.playlist) state.music.playlist = [];
+        state.music.playlist.push(newSong);
+        
+        // 自动播放新添加的歌曲
+        playSong(newSong.id);
+        
+        saveConfig();
+        
+        // 重置表单并切换到列表
+        resetMusicUploadForm();
+        switchMusicTab('list');
+        renderMusicPlaylist();
+    }
+
+    function renderMusicPlaylist() {
+        const list = document.getElementById('music-playlist');
+        const emptyState = document.getElementById('music-empty-state');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        if (!state.music.playlist || state.music.playlist.length === 0) {
+            if (emptyState) emptyState.style.display = 'flex';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        state.music.playlist.forEach(song => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            const isPlaying = state.music.currentSongId === song.id;
+            
+            item.innerHTML = `
+                <div class="list-content column" style="flex: 1;">
+                    <div style="font-weight: bold; font-size: 16px; ${isPlaying ? 'color: #007AFF;' : ''}">${song.title}</div>
+                    <div style="font-size: 12px; color: #888;">${song.artist}</div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="ios-btn-small" onclick="window.playSong(${song.id})" style="${isPlaying ? 'background-color: #007AFF;' : ''}">${isPlaying ? '播放中' : '播放'}</button>
+                    <button class="ios-btn-small danger" onclick="window.deleteSong(${song.id})">删除</button>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    window.playSong = function(id) {
+        const song = state.music.playlist.find(s => s.id === id);
+        if (!song) return;
+
+        state.music.currentSongId = id;
+        state.music.title = song.title;
+        state.music.artist = song.artist;
+        state.music.src = song.src;
+        state.music.lyricsData = song.lyricsData;
+        state.music.lyricsFile = song.lyricsFile;
+        
+        bgMusicAudio.src = song.src;
+        
+        // 播放
+        bgMusicAudio.play().then(() => {
+            state.music.playing = true;
+            updateMusicUI();
+            renderMusicPlaylist(); // 更新列表状态
+        }).catch(err => {
+            console.error('播放失败:', err);
+            alert('播放失败');
+        });
+        
+        saveConfig();
+    };
+
+    window.deleteSong = function(id) {
+        if (confirm('确定要删除这首歌吗？')) {
+            state.music.playlist = state.music.playlist.filter(s => s.id !== id);
+            if (state.music.currentSongId === id) {
+                state.music.currentSongId = null;
+                // 停止播放？或者保持当前状态直到切换
+            }
+            saveConfig();
+            renderMusicPlaylist();
+        }
+    };
+
+    function toggleMusicPlay() {
+        if (!state.music.src) {
+            alert('请先设置音乐源');
+            return;
+        }
+
+        if (bgMusicAudio.paused) {
+            bgMusicAudio.play().then(() => {
+                state.music.playing = true;
+                updateMusicUI();
+            }).catch(err => {
+                console.error('播放失败:', err);
+                alert('播放失败，可能是浏览器限制自动播放，请尝试手动点击播放。');
+            });
+        } else {
+            bgMusicAudio.pause();
+            state.music.playing = false;
+            updateMusicUI();
+        }
+    }
+
+    function updateMusicUI() {
+        const widget = document.getElementById('music-widget');
+        const cover = document.getElementById('vinyl-cover');
+        const disk = document.getElementById('vinyl-disk');
+        const title = document.getElementById('song-title');
+        const artist = document.getElementById('artist-name');
+        const lyricsContainer = document.getElementById('lyrics-display');
+        const playIcon = document.getElementById('play-icon');
+
+        if (widget && state.music.widgetBg) {
+            widget.style.backgroundImage = `url('${state.music.widgetBg}')`;
+            widget.style.backgroundSize = 'cover';
+            widget.style.backgroundPosition = 'center';
+            // 如果有背景图，可能需要调整文字颜色，这里简单处理为白色阴影或保持原样
+            // 为了确保可读性，可以加一个半透明遮罩，或者让用户自己决定
+            // 这里不做额外处理，保持原样
+        } else if (widget) {
+            widget.style.backgroundImage = '';
+        }
+
+        if (cover) cover.style.backgroundImage = `url('${state.music.cover}')`;
+        if (title) title.textContent = state.music.title;
+        if (artist) artist.textContent = state.music.artist;
+        
+        if (lyricsContainer) {
+            // 渲染歌词列表
+            let html = '<div class="lyrics-scroll-container" id="lyrics-scroll">';
+            if (state.music.lyricsData && state.music.lyricsData.length > 0) {
+                state.music.lyricsData.forEach((line, index) => {
+                    html += `<div class="lyric-line" data-time="${line.time}" data-index="${index}">${line.text}</div>`;
+                });
+            } else {
+                html += '<div class="lyric-line">暂无歌词</div>';
+            }
+            html += '</div>';
+            lyricsContainer.innerHTML = html;
+        }
+
+        if (state.music.playing) {
+            if (disk) disk.classList.add('playing');
+            if (playIcon) {
+                playIcon.className = 'fas fa-pause';
+            }
+        } else {
+            if (disk) disk.classList.remove('playing');
+            if (playIcon) {
+                playIcon.className = 'fas fa-play';
+            }
+        }
+    }
+
+    function syncLyrics() {
+        const currentTime = bgMusicAudio.currentTime;
+        const lyricsData = state.music.lyricsData;
+        
+        if (!lyricsData || lyricsData.length === 0) return;
+
+        // 找到当前播放的歌词行
+        let activeIndex = -1;
+        for (let i = 0; i < lyricsData.length; i++) {
+            if (currentTime >= lyricsData[i].time) {
+                activeIndex = i;
+            } else {
+                break;
+            }
+        }
+
+        if (activeIndex !== -1) {
+            const scrollContainer = document.getElementById('lyrics-scroll');
+            const lines = document.querySelectorAll('.lyric-line');
+            
+            // 移除旧的高亮
+            lines.forEach(line => line.classList.remove('active'));
+            
+            // 添加新高亮
+            if (lines[activeIndex]) {
+                lines[activeIndex].classList.add('active');
+                
+                // 滚动逻辑
+                // 假设每行高度约 20px，容器高度 60px，显示 3 行
+                // 我们希望当前行在中间 (第2行)
+                // 初始 top 是 20px (第一行在中间)
+                // activeIndex = 0 -> top: 20px
+                // activeIndex = 1 -> top: 0px
+                // activeIndex = 2 -> top: -20px
+                
+                const lineHeight = 20; // 估算行高，与 CSS 对应
+                const initialTop = 20;
+                const newTop = initialTop - (activeIndex * lineHeight);
+                
+                if (scrollContainer) {
+                    scrollContainer.style.transform = `translateY(${newTop - 20}px)`; // -20 是因为 transform 是相对于初始位置的偏移？不，直接用 top 属性可能更简单，或者 transform translateY
+                    // 修正：CSS 中 .lyrics-scroll-container 是 absolute top: 20px
+                    // 我们修改 transform translateY
+                    // 初始 translateY(0) -> 显示第1行在中间
+                    // activeIndex 0 -> translateY(0)
+                    // activeIndex 1 -> translateY(-20px)
+                    
+                    scrollContainer.style.transform = `translateY(-${activeIndex * lineHeight}px)`;
+                }
+            }
+        }
     }
 
     // --- 主题自定义器功能 ---
@@ -1098,35 +1788,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const controls = [
             { id: 'ctrl-top-bg', target: 'preview-top-bar', prop: 'backgroundImage', type: 'url' },
             { id: 'ctrl-bottom-bg', target: 'preview-bottom-bar', prop: 'backgroundImage', type: 'url' },
-            { id: 'ctrl-top-height', target: 'preview-top-bar', prop: 'height', type: 'px', displayId: 'val-top-height' },
-            { id: 'ctrl-bottom-height', target: 'preview-bottom-bar', prop: 'height', type: 'px', displayId: 'val-bottom-height' },
-            { id: 'ctrl-input-width', target: 'preview-input', prop: 'width', type: '%', displayId: 'val-input-width' },
-            { id: 'ctrl-input-radius', target: 'preview-input', prop: 'borderRadius', type: 'px', displayId: 'val-input-radius' },
-            
-            // 位置偏移 (Transform)
-            { id: 'ctrl-bottom-bar-x', target: 'preview-bottom-bar', type: 'transform-x', pair: 'ctrl-bottom-bar-y', displayId: 'val-bottom-bar-x' },
-            { id: 'ctrl-bottom-bar-y', target: 'preview-bottom-bar', type: 'transform-y', pair: 'ctrl-bottom-bar-x', displayId: 'val-bottom-bar-y' },
-            { id: 'ctrl-title-x', target: 'preview-title', type: 'transform-x', pair: 'ctrl-title-y', displayId: 'val-title-x' },
-            { id: 'ctrl-title-y', target: 'preview-title', type: 'transform-y', pair: 'ctrl-title-x', displayId: 'val-title-y' },
-            { id: 'ctrl-input-x', target: 'preview-input', type: 'transform-x', pair: 'ctrl-input-y', displayId: 'val-input-x' },
-            { id: 'ctrl-input-y', target: 'preview-input', type: 'transform-y', pair: 'ctrl-input-x', displayId: 'val-input-y' },
-            { id: 'ctrl-back-x', target: 'preview-back-btn', type: 'transform-x', pair: 'ctrl-back-y', displayId: 'val-back-x' },
-            { id: 'ctrl-back-y', target: 'preview-back-btn', type: 'transform-y', pair: 'ctrl-back-x', displayId: 'val-back-y' },
-            { id: 'ctrl-menu-x', target: 'preview-menu-btn', type: 'transform-x', pair: 'ctrl-menu-y', displayId: 'val-menu-x' },
-            { id: 'ctrl-menu-y', target: 'preview-menu-btn', type: 'transform-y', pair: 'ctrl-menu-x', displayId: 'val-menu-y' },
-            { id: 'ctrl-plus-x', target: 'preview-plus-btn', type: 'transform-x', pair: 'ctrl-plus-y', displayId: 'val-plus-x' },
-            { id: 'ctrl-plus-y', target: 'preview-plus-btn', type: 'transform-y', pair: 'ctrl-plus-x', displayId: 'val-plus-y' },
-            { id: 'ctrl-emoji-x', target: 'preview-emoji-btn', type: 'transform-x', pair: 'ctrl-emoji-y', displayId: 'val-emoji-x' },
-            { id: 'ctrl-emoji-y', target: 'preview-emoji-btn', type: 'transform-y', pair: 'ctrl-emoji-x', displayId: 'val-emoji-y' },
-            { id: 'ctrl-send-x', target: 'preview-send-btn', type: 'transform-x', pair: 'ctrl-send-y', displayId: 'val-send-x' },
-            { id: 'ctrl-send-y', target: 'preview-send-btn', type: 'transform-y', pair: 'ctrl-send-x', displayId: 'val-send-y' },
-
-            // 按钮大小 (Font Size)
-            { id: 'ctrl-back-size', target: 'preview-back-btn', prop: 'fontSize', type: 'px', displayId: 'val-back-size' },
-            { id: 'ctrl-menu-size', target: 'preview-menu-btn', prop: 'fontSize', type: 'px', displayId: 'val-menu-size' },
-            { id: 'ctrl-plus-size', target: 'preview-plus-btn', prop: 'fontSize', type: 'px', displayId: 'val-plus-size' },
-            { id: 'ctrl-emoji-size', target: 'preview-emoji-btn', prop: 'fontSize', type: 'px', displayId: 'val-emoji-size' },
-            { id: 'ctrl-send-size', target: 'preview-send-btn', prop: 'fontSize', type: 'px', displayId: 'val-send-size' },
 
             // 图标处理
             { id: 'ctrl-back-icon', target: 'preview-back-btn', type: 'icon' },
@@ -1177,56 +1838,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'ctrl-user-bg-x', target: 'preview-user-bubble', type: 'bg-pos-x', pair: 'ctrl-user-bg-y' },
             { id: 'ctrl-user-bg-y', target: 'preview-user-bubble', type: 'bg-pos-y', pair: 'ctrl-user-bg-x' },
 
-            // 转账卡片
-            { id: 'ctrl-transfer-bg', target: 'preview-transfer-card', prop: 'backgroundColor', type: 'color' },
-            { id: 'ctrl-transfer-text', target: 'preview-transfer-card', prop: 'color', type: 'color' },
-            // 支持四个角分别设置
-            { id: 'ctrl-transfer-radius-tl', target: 'preview-transfer-card', prop: 'borderTopLeftRadius', type: 'px', displayId: 'val-transfer-radius-tl' },
-            { id: 'ctrl-transfer-radius-tr', target: 'preview-transfer-card', prop: 'borderTopRightRadius', type: 'px', displayId: 'val-transfer-radius-tr' },
-            { id: 'ctrl-transfer-radius-br', target: 'preview-transfer-card', prop: 'borderBottomRightRadius', type: 'px', displayId: 'val-transfer-radius-br' },
-            { id: 'ctrl-transfer-radius-bl', target: 'preview-transfer-card', prop: 'borderBottomLeftRadius', type: 'px', displayId: 'val-transfer-radius-bl' },
-            // 兼容单一圆角设置（老控件）
-            { id: 'ctrl-transfer-radius', target: 'preview-transfer-card', prop: 'borderRadius', type: 'px', displayId: 'val-transfer-radius' },
-            { id: 'ctrl-transfer-icon-bg', target: 'preview-transfer-icon', prop: 'backgroundColor', type: 'color' },
-            { id: 'ctrl-transfer-icon-color', target: 'preview-transfer-icon', prop: 'color', type: 'color' },
-            { id: 'ctrl-transfer-width', target: 'preview-transfer-card', prop: 'width', type: 'px', displayId: 'val-transfer-width' },
-            { id: 'ctrl-transfer-height', target: 'preview-transfer-card', prop: 'height', type: 'px', displayId: 'val-transfer-height' },
-            { id: 'ctrl-transfer-icon-url', target: 'preview-transfer-icon', type: 'icon' },
-            // 图标位置与大小
-            { id: 'ctrl-transfer-icon-x', target: 'preview-transfer-icon', type: 'transform-x', pair: 'ctrl-transfer-icon-y', displayId: 'val-transfer-icon-x' },
-            { id: 'ctrl-transfer-icon-y', target: 'preview-transfer-icon', type: 'transform-y', pair: 'ctrl-transfer-icon-x', displayId: 'val-transfer-icon-y' },
-            { id: 'ctrl-transfer-icon-inner-x', target: 'preview-transfer-icon-inner', type: 'transform-x', pair: 'ctrl-transfer-icon-inner-y', displayId: 'val-transfer-icon-inner-x' },
-            { id: 'ctrl-transfer-icon-inner-y', target: 'preview-transfer-icon-inner', type: 'transform-y', pair: 'ctrl-transfer-icon-inner-x', displayId: 'val-transfer-icon-inner-y' },
-            { id: 'ctrl-transfer-icon-size', target: 'preview-transfer-icon', prop: 'fontSize', type: 'px', displayId: 'val-transfer-icon-size' },
-            { id: 'ctrl-transfer-amount-x', target: 'preview-transfer-amount', type: 'transform-x', pair: 'ctrl-transfer-amount-y', displayId: 'val-transfer-amount-x' },
-            { id: 'ctrl-transfer-amount-y', target: 'preview-transfer-amount', type: 'transform-y', pair: 'ctrl-transfer-amount-x', displayId: 'val-transfer-amount-y' },
-            { id: 'ctrl-transfer-remark-x', target: 'preview-transfer-remark', type: 'transform-x', pair: 'ctrl-transfer-remark-y', displayId: 'val-transfer-remark-x' },
-            { id: 'ctrl-transfer-remark-y', target: 'preview-transfer-remark', type: 'transform-y', pair: 'ctrl-transfer-remark-x', displayId: 'val-transfer-remark-y' },
-            { id: 'ctrl-transfer-remark-text', target: 'preview-transfer-remark', type: 'text' },
-            
-            // 已收款 - 转账卡片 控件（后缀 -accepted）
-            { id: 'ctrl-transfer-bg-accepted', target: 'preview-transfer-card-accepted', prop: 'backgroundColor', type: 'color' },
-            { id: 'ctrl-transfer-text-accepted', target: 'preview-transfer-card-accepted', prop: 'color', type: 'color' },
-            { id: 'ctrl-transfer-radius-tl-accepted', target: 'preview-transfer-card-accepted', prop: 'borderTopLeftRadius', type: 'px', displayId: 'val-transfer-radius-tl-accepted' },
-            { id: 'ctrl-transfer-radius-tr-accepted', target: 'preview-transfer-card-accepted', prop: 'borderTopRightRadius', type: 'px', displayId: 'val-transfer-radius-tr-accepted' },
-            { id: 'ctrl-transfer-radius-br-accepted', target: 'preview-transfer-card-accepted', prop: 'borderBottomRightRadius', type: 'px', displayId: 'val-transfer-radius-br-accepted' },
-            { id: 'ctrl-transfer-radius-bl-accepted', target: 'preview-transfer-card-accepted', prop: 'borderBottomLeftRadius', type: 'px', displayId: 'val-transfer-radius-bl-accepted' },
-            { id: 'ctrl-transfer-radius-accepted', target: 'preview-transfer-card-accepted', prop: 'borderRadius', type: 'px', displayId: 'val-transfer-radius-accepted' },
-            { id: 'ctrl-transfer-icon-bg-accepted', target: 'preview-transfer-icon-accepted', prop: 'backgroundColor', type: 'color' },
-            { id: 'ctrl-transfer-icon-color-accepted', target: 'preview-transfer-icon-accepted', prop: 'color', type: 'color' },
-            { id: 'ctrl-transfer-width-accepted', target: 'preview-transfer-card-accepted', prop: 'width', type: 'px', displayId: 'val-transfer-width-accepted' },
-            { id: 'ctrl-transfer-height-accepted', target: 'preview-transfer-card-accepted', prop: 'height', type: 'px', displayId: 'val-transfer-height-accepted' },
-            { id: 'ctrl-transfer-icon-url-accepted', target: 'preview-transfer-icon-accepted', type: 'icon' },
-            { id: 'ctrl-transfer-icon-x-accepted', target: 'preview-transfer-icon-accepted', type: 'transform-x', pair: 'ctrl-transfer-icon-y-accepted', displayId: 'val-transfer-icon-x-accepted' },
-            { id: 'ctrl-transfer-icon-y-accepted', target: 'preview-transfer-icon-accepted', type: 'transform-y', pair: 'ctrl-transfer-icon-x-accepted', displayId: 'val-transfer-icon-y-accepted' },
-            { id: 'ctrl-transfer-icon-inner-x-accepted', target: 'preview-transfer-icon-inner-accepted', type: 'transform-x', pair: 'ctrl-transfer-icon-inner-y-accepted', displayId: 'val-transfer-icon-inner-x-accepted' },
-            { id: 'ctrl-transfer-icon-inner-y-accepted', target: 'preview-transfer-icon-inner-accepted', type: 'transform-y', pair: 'ctrl-transfer-icon-inner-x-accepted', displayId: 'val-transfer-icon-inner-y-accepted' },
-            { id: 'ctrl-transfer-icon-size-accepted', target: 'preview-transfer-icon-accepted', prop: 'fontSize', type: 'px', displayId: 'val-transfer-icon-size-accepted' },
-            { id: 'ctrl-transfer-amount-x-accepted', target: 'preview-transfer-amount-accepted', type: 'transform-x', pair: 'ctrl-transfer-amount-y-accepted', displayId: 'val-transfer-amount-x-accepted' },
-            { id: 'ctrl-transfer-amount-y-accepted', target: 'preview-transfer-amount-accepted', type: 'transform-y', pair: 'ctrl-transfer-amount-x-accepted', displayId: 'val-transfer-amount-y-accepted' },
-            { id: 'ctrl-transfer-remark-x-accepted', target: 'preview-transfer-remark-accepted', type: 'transform-x', pair: 'ctrl-transfer-remark-y-accepted', displayId: 'val-transfer-remark-x-accepted' },
-            { id: 'ctrl-transfer-remark-y-accepted', target: 'preview-transfer-remark-accepted', type: 'transform-y', pair: 'ctrl-transfer-remark-x-accepted', displayId: 'val-transfer-remark-y-accepted' },
-            { id: 'ctrl-transfer-remark-text-accepted', target: 'preview-transfer-remark-accepted', type: 'text' },
         ];
 
         controls.forEach(ctrl => {
@@ -1271,17 +1882,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 应用到全局按钮
-        const applyBtn = document.getElementById('apply-to-global-btn');
-        if (applyBtn) {
-            const newApplyBtn = applyBtn.cloneNode(true);
-            applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
-            newApplyBtn.addEventListener('click', () => {
+        // 保存为预设按钮 (新功能)
+        const savePresetBtn = document.getElementById('save-theme-customizer-preset');
+        if (savePresetBtn) {
+            // 移除旧监听器
+            const newBtn = savePresetBtn.cloneNode(true);
+            savePresetBtn.parentNode.replaceChild(newBtn, savePresetBtn);
+            
+            newBtn.addEventListener('click', () => {
                 const css = document.getElementById('css-output').value;
-                state.css = css;
-                applyCSS(css);
+                if (!css) {
+                    alert('没有可保存的CSS内容');
+                    return;
+                }
+                
+                const name = prompt('请输入预设名称：');
+                if (!name) return;
+                
+                const preset = {
+                    name: name,
+                    css: css
+                };
+                
+                state.cssPresets.push(preset);
                 saveConfig();
-                alert('已应用到全局聊天页面');
+                
+                // 更新所有相关的预设列表
+                renderCssPresets();
+                renderChatCssPresets();
+                
+                alert('已保存为预设，可在聊天设置中选择使用');
             });
         }
 
@@ -1295,16 +1925,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     const input = document.getElementById(c.id);
                     if (input) {
                         // 重置为默认值
-                        if (c.id === 'ctrl-top-height') input.value = 64;
-                        else if (c.id === 'ctrl-bottom-height') input.value = 50;
-                        else if (c.id === 'ctrl-input-width') input.value = 100;
-                        else if (c.id === 'ctrl-input-radius') input.value = 18;
-                        else if (c.id.includes('size')) {
-                             if (c.id.includes('plus') || c.id.includes('emoji') || c.id.includes('send')) input.value = 24;
-                             else input.value = 18;
+                        if (c.type === 'color') {
+                            if (c.id === 'ctrl-ai-bg-color') input.value = '#E5E5EA';
+                            else if (c.id === 'ctrl-ai-text-color') input.value = '#000000';
+                            else if (c.id === 'ctrl-user-bg-color') input.value = '#007AFF';
+                            else if (c.id === 'ctrl-user-text-color') input.value = '#FFFFFF';
+                            else input.value = '#000000';
+                        } else if (c.type === 'px') {
+                            if (c.prop.includes('Radius')) input.value = 18;
+                            else if (c.prop.includes('padding')) {
+                                if (c.prop.endsWith('Top') || c.prop.endsWith('Bottom')) input.value = 8;
+                                else input.value = 12;
+                            }
+                            else if (c.prop === 'marginBottom') input.value = 10;
+                            else input.value = 0;
+                        } else if (c.type.includes('transform')) {
+                            input.value = 0;
+                        } else if (c.type.includes('shadow')) {
+                            if (c.type === 'shadow-blur') input.value = 0;
+                            else input.value = '#000000';
+                        } else if (c.type.includes('bg-size')) {
+                            input.value = 100;
+                        } else if (c.type.includes('bg-pos')) {
+                            input.value = 50;
+                        } else {
+                            input.value = ''; // URL 等
                         }
-                        else if (c.type.includes('transform')) input.value = 0;
-                        else input.value = ''; // URL 等
                         
                         // 触发 input 事件以更新预览
                         input.dispatchEvent(new Event('input'));
@@ -1396,41 +2042,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 转账卡片子导航切换
-        const transferSubNavItems = document.querySelectorAll('#transfer-sub-nav .sub-nav-item');
-        const transferControlsNormal = document.getElementById('transfer-controls-normal');
-        const transferControlsAccepted = document.getElementById('transfer-controls-accepted');
-
-        if (transferSubNavItems.length > 0) {
-            transferSubNavItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    // 移除所有 active
-                    transferSubNavItems.forEach(nav => {
-                        nav.classList.remove('active');
-                        nav.style.fontWeight = 'normal';
-                        nav.style.color = '#666';
-                        nav.style.background = 'transparent';
-                        nav.style.boxShadow = 'none';
-                    });
-
-                    // 激活当前
-                    item.classList.add('active');
-                    item.style.fontWeight = '600';
-                    item.style.color = '#000';
-                    item.style.background = '#fff';
-                    item.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-
-                    const target = item.dataset.target;
-                    if (target === 'normal') {
-                        if (transferControlsNormal) transferControlsNormal.classList.remove('hidden');
-                        if (transferControlsAccepted) transferControlsAccepted.classList.add('hidden');
-                    } else if (target === 'accepted') {
-                        if (transferControlsNormal) transferControlsNormal.classList.add('hidden');
-                        if (transferControlsAccepted) transferControlsAccepted.classList.remove('hidden');
-                    }
-                });
-            });
-        }
 
         // 初始化 CSS
         generateCSS(controls);
@@ -1458,10 +2069,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         targets.forEach(target => {
-            const isTransferCtrl = ctrl.target && ctrl.target.startsWith && ctrl.target.startsWith('preview-transfer-');
-            const isAccepted = ctrl.target && ctrl.target.endsWith && ctrl.target.endsWith('-accepted');
-            const baseTarget = isAccepted ? ctrl.target.replace(/-accepted$/, '') : ctrl.target;
-
             if (ctrl.type === 'url') {
                 if (value) {
                     target.style[ctrl.prop] = `url('${value}')`;
@@ -1472,48 +2079,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (ctrl.type === 'px') {
                 target.style[ctrl.prop] = `${value}px`;
-                // 如果是转账卡片，父容器 `.message-content.transfer-msg` 也有固定样式（可能含 !important），
-                // 同步设置到父容器以确保预览生效。
-                if (baseTarget === 'preview-transfer-card') {
-                    const parentMsg = target.closest('.message-content.transfer-msg');
-                    if (parentMsg) {
-                        // 将 camelCase 转为 kebab-case 用于 setProperty
-                        const kebab = ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase();
-                        parentMsg.style.setProperty(kebab, `${value}px`, 'important');
-                    }
-                }
-                // 如果是顶栏高度变化，需要调整消息区域的 top
-                if (ctrl.id === 'ctrl-top-height') {
-                    document.getElementById('preview-messages').style.top = `${value}px`;
-                }
-                // 如果是底栏高度变化，需要调整消息区域的 bottom
-                if (ctrl.id === 'ctrl-bottom-height') {
-                    document.getElementById('preview-messages').style.bottom = `${value}px`;
-                }
-            } else if (ctrl.type === '%') {
-                target.style[ctrl.prop] = `${value}%`;
-                if (ctrl.prop === 'width') {
-                    target.style.flex = 'none'; // 修复宽度不生效
-                }
-                // 对于转账相关的百分比宽度，仅设置当前目标预览元素
-                if (isTransferCtrl) {
-                    if (ctrl.prop === 'width') target.style.flex = 'none';
-                }
-            } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
-                const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
-                const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
-                const x = xInput ? xInput.value : 0;
-                const y = yInput ? yInput.value : 0;
-                
-                let defaultTransform = '';
-                if (ctrl.target === 'preview-title') defaultTransform = 'translateX(-50%)';
-                else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) defaultTransform = 'translateY(-50%)';
-                
-                target.style.transform = `${defaultTransform} translate(${x}px, ${y}px)`;
-                // 转账控件：只修改当前目标的 transform（目标通常是已命名的预览节点）
-                if (isTransferCtrl) {
-                    target.style.display = 'inline-block';
-                }
             } else if (ctrl.type === 'icon') {
                 // 按钮内部图标替换
                 if (value) {
@@ -1528,20 +2093,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (ctrl.type === 'color') {
                 target.style[ctrl.prop] = value;
-                // 特殊处理转账文字颜色，需要应用到内部元素（仅影响当前目标）
-                if (ctrl.id === 'ctrl-transfer-text') {
-                    const info = target.querySelector('.transfer-info');
-                    if (info) info.style.color = value;
-                }
-                // 同步转账卡片背景到父容器，确保覆盖原始样式（仅当前目标）
-                if (baseTarget === 'preview-transfer-card') {
-                    const parentMsg = target.closest('.message-content.transfer-msg');
-                    if (parentMsg) parentMsg.style.setProperty('background-color', value, 'important');
-                }
-                // 对于转账相关颜色，仅修改当前目标元素
-                if (isTransferCtrl) {
-                    target.style[ctrl.prop] = value;
-                }
             } else if (ctrl.type === 'shadow-blur' || ctrl.type === 'shadow-color') {
                 const blurInput = document.getElementById(ctrl.type === 'shadow-blur' ? ctrl.id : ctrl.pair);
                 const colorInput = document.getElementById(ctrl.type === 'shadow-color' ? ctrl.id : ctrl.pair);
@@ -1576,224 +2127,128 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateCSS(controls) {
         let css = '/* 自定义主题 CSS */\n\n';
-        const processedTransforms = new Set();
         
-        function getTransferSelector(baseTarget, isAccepted) {
-            const prefix = isAccepted ? '.message-content.transfer-msg.accepted ' : '.message-content.transfer-msg:not(.accepted) ';
-            if (baseTarget === 'preview-transfer-card') return prefix + '.transfer-card';
-            if (baseTarget === 'preview-transfer-icon') return prefix + '.transfer-icon';
-            if (baseTarget === 'preview-transfer-icon-inner') return prefix + '.transfer-icon i';
-            if (baseTarget === 'preview-transfer-desc') return prefix + '.transfer-bottom span';
-            if (baseTarget === 'preview-transfer-bottom') return prefix + '.transfer-bottom';
-            if (baseTarget === 'preview-transfer-amount') return prefix + '.transfer-amount';
-            if (baseTarget === 'preview-transfer-remark') return prefix + '.transfer-remark';
-            return '';
+        // 1. 顶栏和底栏背景
+        const topBg = document.getElementById('ctrl-top-bg')?.value;
+        const bottomBg = document.getElementById('ctrl-bottom-bg')?.value;
+
+        css += `/* 顶栏样式 */\n.wechat-header, .chat-header {\n`;
+        if (topBg) {
+            css += `    background-image: url('${topBg}') !important;\n    background-size: cover !important;\n    background-position: center !important;\n    background-color: transparent !important;\n`;
+        } else {
+            css += `    /* background-image: url('...'); */\n    /* background-size: cover; */\n    /* background-position: center; */\n`;
         }
+        css += `}\n\n`;
+
+        css += `/* 底栏样式 */\n.wechat-tab-bar, .chat-input-area {\n`;
+        if (bottomBg) {
+            css += `    background-image: url('${bottomBg}') !important;\n    background-size: cover !important;\n    background-position: center !important;\n    background-color: transparent !important;\n`;
+        } else {
+            css += `    /* background-image: url('...'); */\n    /* background-size: cover; */\n    /* background-position: center; */\n`;
+        }
+        css += `}\n\n`;
+
+        // 2. 按钮图标
+        const iconMap = {
+            'ctrl-back-icon': { selector: '#back-to-contacts', name: '返回按钮' },
+            'ctrl-menu-icon': { selector: '#chat-settings-btn', name: '菜单按钮' },
+            'ctrl-plus-icon': { selector: '#chat-more-btn', name: '加号按钮' },
+            'ctrl-emoji-icon': { selector: '#sticker-btn', name: '表情按钮' },
+            'ctrl-send-icon': { selector: '#trigger-ai-reply-btn', name: '发送按钮' }
+        };
 
         controls.forEach(ctrl => {
-            const isAccepted = ctrl.target && ctrl.target.endsWith && ctrl.target.endsWith('-accepted');
-            const baseTarget = isAccepted ? ctrl.target.replace(/-accepted$/, '') : ctrl.target;
-            const input = document.getElementById(ctrl.id);
-            const value = input ? input.value : '';
-            
-            if (!value && value !== 0) return; // 允许 0
-            
-            // 忽略默认值
-            if (ctrl.id === 'ctrl-top-height' && value == 64) return;
-            if (ctrl.id === 'ctrl-bottom-height' && value == 50) return;
-            if (ctrl.id === 'ctrl-input-width' && value == 100) return;
-            if (ctrl.id === 'ctrl-input-radius' && value == 18) return;
-            if (ctrl.id === 'ctrl-back-size' && value == 18) return;
-            if (ctrl.id === 'ctrl-menu-size' && value == 18) return;
-            if (ctrl.id === 'ctrl-plus-size' && value == 24) return;
-            if (ctrl.id === 'ctrl-emoji-size' && value == 24) return;
-            if (ctrl.id === 'ctrl-send-size' && value == 24) return;
-
-            if (ctrl.id === 'ctrl-top-bg') {
-                css += `/* 顶栏背景 */\n.wechat-header, .chat-header {\n    background-image: url('${value}');\n    background-size: cover;\n    background-position: center;\n    background-color: transparent;\n}\n\n`;
-            } else if (ctrl.id === 'ctrl-bottom-bg') {
-                css += `/* 底栏背景 */\n.wechat-tab-bar, .chat-input-area {\n    background-image: url('${value}');\n    background-size: cover;\n    background-position: center;\n    background-color: transparent;\n}\n\n`;
-            } else if (ctrl.id === 'ctrl-top-height') {
-                css += `/* 顶栏高度 */\n.wechat-header, .chat-header {\n    height: calc(${value}px + env(safe-area-inset-top));\n    padding-top: env(safe-area-inset-top);\n}\n.wechat-body, .chat-body {\n    padding-top: calc(${value}px + env(safe-area-inset-top));\n}\n\n`;
-            } else if (ctrl.id === 'ctrl-bottom-height') {
-                css += `/* 底栏高度 */\n.wechat-tab-bar, .chat-input-area {\n    height: calc(${value}px + env(safe-area-inset-bottom));\n    padding-bottom: env(safe-area-inset-bottom);\n}\n#wechat-tab-contacts, #wechat-tab-me {\n    padding-bottom: calc(${value}px + env(safe-area-inset-bottom));\n}\n\n`;
-            } else if (ctrl.id === 'ctrl-input-width') {
-                css += `/* 输入框宽度 */\n#chat-input {\n    width: ${value}%;\n    flex: unset;\n}\n\n`;
-            } else if (ctrl.id === 'ctrl-input-radius') {
-                css += `/* 输入框圆角 */\n#chat-input {\n    border-radius: ${value}px;\n}\n\n`;
-            } else if (ctrl.type === 'px' && ctrl.prop === 'fontSize') {
-                let selector = '';
-                if (ctrl.target === 'preview-back-btn') selector = '#back-to-contacts';
-                else if (ctrl.target === 'preview-menu-btn') selector = '#chat-settings-btn';
-                else if (ctrl.target === 'preview-plus-btn') selector = '#chat-more-btn';
-                else if (ctrl.target === 'preview-emoji-btn') selector = '#sticker-btn';
-                else if (ctrl.target === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
-                else if (ctrl.target === 'preview-transfer-icon') selector = '.transfer-icon';
+            if (ctrl.type === 'icon' && iconMap[ctrl.id]) {
+                const input = document.getElementById(ctrl.id);
+                const url = input ? input.value : '';
+                const info = iconMap[ctrl.id];
                 
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop}: ${value}%;\n}\n\n`;
-                    if (ctrl.prop === 'width') css += `${selector} { flex: none; }\n\n`;
-                }
-            } else if (ctrl.type.includes('icon')) {
-                css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
-            } else if (ctrl.type === 'color') {
-                let selector = '';
-                if (baseTarget === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (baseTarget === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                else if (baseTarget && baseTarget.startsWith('preview-transfer-')) selector = getTransferSelector(baseTarget, isAccepted);
-
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};\n}\n\n`;
-                    // 特殊处理转账文字颜色（仅为普通控件 id）
-                    if (ctrl.id === 'ctrl-transfer-text') {
-                        css += `.transfer-info {\n    color: ${value};\n}\n\n`;
-                    }
-                }
-            } else if (ctrl.type === 'text') {
-                // 文本内容修改，不生成CSS，直接修改DOM
-                const target = document.getElementById(ctrl.target);
-                if (target) {
-                    target.textContent = value;
-                }
-            } else if (ctrl.type === 'px' && ctrl.prop.includes('Radius')) {
-                let selector = '';
-                if (baseTarget === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (baseTarget === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                else if (baseTarget === 'preview-transfer-card') selector = getTransferSelector(baseTarget, isAccepted);
-                
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'px' && (ctrl.prop === 'width' || ctrl.prop === 'height')) {
-                let selector = '';
-                if (baseTarget === 'preview-transfer-card') selector = getTransferSelector(baseTarget, isAccepted);
-                else if (baseTarget === 'preview-transfer-bottom') selector = getTransferSelector(baseTarget, isAccepted);
-                
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop}: ${value}px;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'icon') {
-                if (ctrl.id === 'ctrl-transfer-icon-url') {
-                    css += `/* 转账图标替换 - 建议使用 JS 替换或 background-image 覆盖 */\n`;
-                    // 生成已收款/普通两类选择器
-                    const selNormal = getTransferSelector('preview-transfer-icon', false);
-                    const selAccepted = getTransferSelector('preview-transfer-icon', true);
-                    css += `${selNormal} i, ${selAccepted} i { display: none; }\n`;
-                    css += `${selNormal}, ${selAccepted} { background-image: url('${value}'); background-size: contain; background-repeat: no-repeat; background-position: center; }\n\n`;
+                css += `/* ${info.name} */\n${info.selector} {\n`;
+                if (url) {
+                    css += `    background-image: url('${url}') !important;\n    background-size: contain !important;\n    background-repeat: no-repeat !important;\n    background-position: center !important;\n`;
+                    css += `}\n${info.selector} i {\n    display: none !important;\n}\n\n`;
                 } else {
-                    css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
-                }
-            } else if (ctrl.type === 'transform-x' || ctrl.type === 'transform-y') {
-                if (processedTransforms.has(ctrl.target)) return;
-                processedTransforms.add(ctrl.target);
-                
-                const xInput = document.getElementById(ctrl.type === 'transform-x' ? ctrl.id : ctrl.pair);
-                const yInput = document.getElementById(ctrl.type === 'transform-y' ? ctrl.id : ctrl.pair);
-                const x = xInput ? xInput.value : 0;
-                const y = yInput ? yInput.value : 0;
-                
-                if (x == 0 && y == 0) return;
-                
-                let selector = '';
-                if (baseTarget === 'preview-bottom-bar') selector = '.chat-input-area';
-                else if (baseTarget === 'preview-title') selector = '.chat-header > span';
-                else if (baseTarget === 'preview-input') selector = '#chat-input';
-                else if (baseTarget === 'preview-back-btn') selector = '#back-to-contacts';
-                else if (baseTarget === 'preview-menu-btn') selector = '#chat-settings-btn';
-                else if (baseTarget === 'preview-plus-btn') selector = '#chat-more-btn';
-                else if (baseTarget === 'preview-emoji-btn') selector = '#sticker-btn';
-                else if (baseTarget === 'preview-send-btn') selector = '#trigger-ai-reply-btn';
-                else if (baseTarget === 'preview-transfer-amount') selector = getTransferSelector('preview-transfer-amount', isAccepted);
-                else if (baseTarget === 'preview-transfer-remark') selector = getTransferSelector('preview-transfer-remark', isAccepted);
-                else if (baseTarget === 'preview-transfer-desc') selector = getTransferSelector('preview-transfer-desc', isAccepted);
-                else if (baseTarget === 'preview-transfer-icon') selector = getTransferSelector('preview-transfer-icon', isAccepted);
-                else if (baseTarget === 'preview-transfer-icon-inner') selector = getTransferSelector('preview-transfer-icon-inner', isAccepted);
-                else if (baseTarget === 'preview-transfer-bottom') selector = getTransferSelector('preview-transfer-bottom', isAccepted);
-
-                if (selector) {
-                    let transformValue = `translate(${x}px, ${y}px)`;
-                    if (ctrl.target === 'preview-title') transformValue = `translateX(-50%) ${transformValue}`;
-                    else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) transformValue = `translateY(-50%) ${transformValue}`;
-                    
-                    css += `${selector} {\n    transform: ${transformValue};\n    display: inline-block;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'px' && ctrl.prop.includes('padding')) {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                else if (ctrl.target === 'preview-transfer-card') selector = '.transfer-card';
-                
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'px' && ctrl.prop.includes('padding')) {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                
-                if (selector) {
-                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'px' && ctrl.prop === 'marginBottom') {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-row') selector = '.chat-message.other';
-                else if (ctrl.target === 'preview-user-row') selector = '.chat-message.user';
-                
-                if (selector) {
-                    css += `${selector} {\n    margin-bottom: ${value}px;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'shadow-blur' || ctrl.type === 'shadow-color') {
-                if (processedTransforms.has(ctrl.target + '-shadow')) return;
-                processedTransforms.add(ctrl.target + '-shadow');
-                
-                const blurInput = document.getElementById(ctrl.type === 'shadow-blur' ? ctrl.id : ctrl.pair);
-                const colorInput = document.getElementById(ctrl.type === 'shadow-color' ? ctrl.id : ctrl.pair);
-                const blur = blurInput ? blurInput.value : 0;
-                const color = colorInput ? colorInput.value : '#000000';
-                
-                if (blur > 0) {
-                    let selector = '';
-                    if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                    else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                    
-                    if (selector) {
-                        css += `${selector} {\n    box-shadow: 0 2px ${blur}px ${color};\n}\n\n`;
-                    }
-                }
-            } else if (ctrl.type === 'bg-img') {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                
-                if (selector && value) {
-                    css += `${selector} {\n    background-image: url('${value}');\n    background-repeat: no-repeat;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'bg-size') {
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                
-                if (selector) {
-                    css += `${selector} {\n    background-size: ${value}%;\n}\n\n`;
-                }
-            } else if (ctrl.type === 'bg-pos-x' || ctrl.type === 'bg-pos-y') {
-                if (processedTransforms.has(ctrl.target + '-bgpos')) return;
-                processedTransforms.add(ctrl.target + '-bgpos');
-                
-                const xInput = document.getElementById(ctrl.type === 'bg-pos-x' ? ctrl.id : ctrl.pair);
-                const yInput = document.getElementById(ctrl.type === 'bg-pos-y' ? ctrl.id : ctrl.pair);
-                const x = xInput ? xInput.value : 50;
-                const y = yInput ? yInput.value : 50;
-                
-                let selector = '';
-                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
-                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
-                
-                if (selector) {
-                    css += `${selector} {\n    background-position: ${x}% ${y}%;\n}\n\n`;
+                    css += `    /* background-image: url('...'); */\n    /* background-size: contain; */\n    /* background-repeat: no-repeat; */\n    /* background-position: center; */\n}\n/* ${info.selector} i { display: none; } */\n\n`;
                 }
             }
         });
+
+        // 3. 消息气泡样式
+        const bubbleStyles = {
+            ai: { selector: '.chat-message.other .message-content:not(.transfer-msg)', props: [] },
+            user: { selector: '.chat-message.user .message-content:not(.transfer-msg)', props: [] },
+            aiRow: { selector: '.chat-message.other', props: [] },
+            userRow: { selector: '.chat-message.user', props: [] }
+        };
+
+        // 收集属性
+        controls.forEach(ctrl => {
+            const input = document.getElementById(ctrl.id);
+            const value = input ? input.value : '';
+            
+            // 即使值为空（对于非必需项），我们也可能想生成注释，但为了简化，我们只处理有值的
+            // 对于 range 和 color，它们总是有值的
+            if (value === '' && value !== 0 && ctrl.type !== 'bg-img') return;
+
+            let targetKey = '';
+            if (ctrl.target === 'preview-ai-bubble') targetKey = 'ai';
+            else if (ctrl.target === 'preview-user-bubble') targetKey = 'user';
+            else if (ctrl.target === 'preview-ai-row') targetKey = 'aiRow';
+            else if (ctrl.target === 'preview-user-row') targetKey = 'userRow';
+
+            if (!targetKey) return;
+
+            if (ctrl.type === 'color') {
+                bubbleStyles[targetKey].props.push(`${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value} !important`);
+            } else if (ctrl.type === 'px') {
+                bubbleStyles[targetKey].props.push(`${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px !important`);
+            } else if (ctrl.type === 'shadow-blur') {
+                const colorInput = document.getElementById(ctrl.pair);
+                const color = colorInput ? colorInput.value : '#000000';
+                if (value > 0) {
+                    bubbleStyles[targetKey].props.push(`box-shadow: 0 2px ${value}px ${color} !important`);
+                } else {
+                    bubbleStyles[targetKey].props.push(`box-shadow: none !important`);
+                }
+            } else if (ctrl.type === 'bg-img') {
+                if (value) {
+                    bubbleStyles[targetKey].props.push(`background-image: url('${value}') !important`);
+                    bubbleStyles[targetKey].props.push(`background-repeat: no-repeat !important`);
+                } else {
+                    // 如果没有背景图，不生成属性，或者生成注释
+                    // bubbleStyles[targetKey].props.push(`/* background-image: url('...'); */`);
+                }
+            } else if (ctrl.type === 'bg-size') {
+                bubbleStyles[targetKey].props.push(`background-size: ${value}% !important`);
+            } else if (ctrl.type === 'bg-pos-x') {
+                const yInput = document.getElementById(ctrl.pair);
+                const y = yInput ? yInput.value : 50;
+                bubbleStyles[targetKey].props.push(`background-position: ${value}% ${y}% !important`);
+            } else if (ctrl.type === 'transform-x') {
+                const yInput = document.getElementById(ctrl.pair);
+                const y = yInput ? yInput.value : 0;
+                if (value != 0 || y != 0) {
+                    bubbleStyles[targetKey].props.push(`transform: translate(${value}px, ${y}px) !important`);
+                }
+            }
+        });
+
+        // 生成 CSS 块
+        if (bubbleStyles.ai.props.length > 0) {
+            css += `/* AI 气泡样式 */\n${bubbleStyles.ai.selector} {\n    ${bubbleStyles.ai.props.join(';\n    ')};\n}\n\n`;
+        }
+        if (bubbleStyles.aiRow.props.length > 0) {
+            css += `/* AI 消息行样式 */\n${bubbleStyles.aiRow.selector} {\n    ${bubbleStyles.aiRow.props.join(';\n    ')};\n}\n\n`;
+        }
+        if (bubbleStyles.user.props.length > 0) {
+            css += `/* 用户气泡样式 */\n${bubbleStyles.user.selector} {\n    ${bubbleStyles.user.props.join(';\n    ')};\n}\n\n`;
+        }
+        if (bubbleStyles.userRow.props.length > 0) {
+            css += `/* 用户消息行样式 */\n${bubbleStyles.userRow.selector} {\n    ${bubbleStyles.userRow.props.join(';\n    ')};\n}\n\n`;
+        }
+
+        // 强制转账消息样式
+        css += `/* 强制转账消息样式 */\n.chat-message .message-content.transfer-msg {\n    background-color: #ffffff !important;\n    color: #000000 !important;\n    padding: 0 !important;\n    border-radius: 12px !important;\n}\n`;
 
         document.getElementById('css-output').value = css;
     }
@@ -3479,7 +3934,7 @@ JSON格式示例：
     function saveContactAndClose(contact) {
         state.contacts.push(contact);
         saveConfig();
-        renderContactList();
+        renderContactList(state.currentContactGroup || 'all');
         
         // 清空输入
         document.getElementById('contact-name').value = '';
@@ -3496,24 +3951,110 @@ JSON格式示例：
         openChat(contact.id);
     }
 
-    function renderContactList() {
+    function renderContactList(filterGroup = 'all') {
+        // 如果是切换分组（而不是初始化或更新数据），添加过渡动画
+        const isSwitchingGroup = state.currentContactGroup !== filterGroup;
+        state.currentContactGroup = filterGroup; // 记录当前分组状态
+
+        // 1. 渲染分组标签
+        const tabsContainer = document.getElementById('contacts-group-tabs');
+        if (tabsContainer) {
+            tabsContainer.innerHTML = '';
+            
+            // 添加“全部”标签 (显示为 News 或 All)
+            const allTab = document.createElement('div');
+            allTab.className = `group-tab ${filterGroup === 'all' ? 'active' : ''}`;
+            allTab.textContent = 'News'; // 参考图是 News，也可以叫 All
+            allTab.onclick = () => renderContactList('all');
+            tabsContainer.appendChild(allTab);
+
+            // 添加其他分组
+            if (state.contactGroups) {
+                state.contactGroups.forEach(group => {
+                    const tab = document.createElement('div');
+                    tab.className = `group-tab ${filterGroup === group ? 'active' : ''}`;
+                    tab.textContent = group;
+                    tab.onclick = () => renderContactList(group);
+                    tabsContainer.appendChild(tab);
+                });
+            }
+        }
+
+        // 2. 渲染联系人列表
         const list = document.getElementById('contact-list');
         if (!list) return;
-        
-        list.innerHTML = '';
-        
-        state.contacts.forEach(contact => {
-            const item = document.createElement('div');
-            item.className = 'contact-item';
-            item.innerHTML = `
-                <img src="${contact.avatar}" class="contact-avatar">
-                <div class="contact-info">
-                    <div class="contact-name">${contact.remark || contact.nickname || contact.name}</div>
-                </div>
-            `;
-            item.addEventListener('click', () => openChat(contact.id));
-            list.appendChild(item);
-        });
+
+        const renderContent = () => {
+            list.innerHTML = '';
+            
+            let filteredContacts = state.contacts;
+            if (filterGroup !== 'all') {
+                filteredContacts = state.contacts.filter(c => c.group === filterGroup);
+            }
+
+            if (filteredContacts.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无联系人</div>';
+                return;
+            }
+            
+            filteredContacts.forEach(contact => {
+                const item = document.createElement('div');
+                item.className = 'contact-item';
+                
+                // 获取最后一条消息和时间
+                let lastMsgText = ''; // 默认为空，不显示人设
+                let lastMsgTime = '';
+                let unreadCount = 0; // 模拟未读数
+
+                const history = state.chatHistory[contact.id];
+                if (history && history.length > 0) {
+                    const lastMsg = history[history.length - 1];
+                    if (lastMsg.type === 'text') {
+                        lastMsgText = lastMsg.content;
+                    } else if (lastMsg.type === 'image') {
+                        lastMsgText = '[图片]';
+                    } else if (lastMsg.type === 'sticker') {
+                        lastMsgText = '[表情包]';
+                    } else if (lastMsg.type === 'transfer') {
+                        lastMsgText = '[转账]';
+                    }
+                }
+
+                // 模拟时间 (如果没有真实时间)
+                if (!lastMsgTime) {
+                    const now = new Date();
+                    lastMsgTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                }
+
+                const name = contact.remark || contact.nickname || contact.name;
+
+                item.innerHTML = `
+                    <img src="${contact.avatar}" class="contact-avatar">
+                    <div class="contact-info">
+                        <div class="contact-header-row">
+                            <span class="contact-name">${name}</span>
+                            <span class="contact-time">${lastMsgTime}</span>
+                        </div>
+                        <div class="contact-msg-row">
+                            <span class="contact-msg-preview">${lastMsgText}</span>
+                            ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                item.addEventListener('click', () => openChat(contact.id));
+                list.appendChild(item);
+            });
+        };
+
+        if (isSwitchingGroup) {
+            list.classList.add('fade-out');
+            setTimeout(() => {
+                renderContent();
+                list.classList.remove('fade-out');
+            }, 150);
+        } else {
+            renderContent();
+        }
     }
 
     function openChat(contactId) {
@@ -3908,6 +4449,9 @@ JSON格式示例：
         document.getElementById('chat-setting-ai-bg-input').value = '';
 
         document.getElementById('chat-setting-remark').value = contact.remark || '';
+        document.getElementById('chat-setting-group-value').textContent = contact.group || '未分组';
+        state.tempSelectedGroup = contact.group || ''; // 初始化临时分组
+
         document.getElementById('chat-setting-persona').value = contact.persona || '';
         document.getElementById('chat-setting-context-limit').value = contact.contextLimit || '';
         document.getElementById('chat-setting-summary-limit').value = contact.summaryLimit || '';
@@ -4152,6 +4696,7 @@ JSON格式示例：
 
         contact.name = name; // 更新姓名
         contact.remark = remark;
+        contact.group = state.tempSelectedGroup; // 保存分组
         contact.persona = persona;
         contact.contextLimit = contextLimit ? parseInt(contextLimit) : 0;
         contact.summaryLimit = summaryLimit ? parseInt(summaryLimit) : 0;
@@ -4207,7 +4752,7 @@ JSON格式示例：
 
         Promise.all(promises).then(() => {
             saveConfig();
-            renderContactList(); // 更新列表头像/备注
+            renderContactList(state.currentContactGroup || 'all'); // 更新列表头像/备注，保持当前分组
             renderChatHistory(contact.id); // 更新聊天记录头像
             
             // 更新背景
@@ -4346,6 +4891,9 @@ JSON格式示例：
         
         appendMessageToUI(text, isUser, type, description, msg.replyTo, msg.id);
         scrollToBottom();
+
+        // 更新联系人列表的最后一条消息
+        renderContactList(state.currentContactGroup || 'all');
 
         // 检查是否需要自动总结
         checkAndSummarize(state.currentChatContactId);
@@ -5573,6 +6121,9 @@ ${itineraryContext}
             appendMessageToUI(text, false, 'text', null, replyTo, msgData.id);
             
             scrollToBottom();
+
+            // 更新联系人列表的最后一条消息
+            renderContactList(state.currentContactGroup || 'all');
             
             // 检查是否需要自动总结
             checkAndSummarize(state.currentChatContactId);
@@ -7102,6 +7653,34 @@ ${itineraryContext}
                 if (!state.iconColors) state.iconColors = {};
                 if (!state.iconPresets) state.iconPresets = [];
                 if (!state.stickerCategories) state.stickerCategories = [];
+                if (!state.contactGroups) state.contactGroups = [];
+                if (!state.music) state.music = {
+                    playing: false,
+                    cover: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+                    src: '',
+                    title: 'Happy Together',
+                    artist: 'Maximillian',
+                    lyricsData: [
+                        { time: 0, text: "So fast, I almost missed it" },
+                        { time: 3, text: "I spill another glass of wine" },
+                        { time: 6, text: "Kill the lights to pass the time" }
+                    ],
+                    lyricsFile: ''
+                };
+                if (!state.polaroid) state.polaroid = {
+                    img1: 'https://placehold.co/300x300/eee/999?text=Photo',
+                    text1: '讨厌坏天气',
+                    img2: 'https://placehold.co/300x300/eee/999?text=Photo',
+                    text2: '美好回忆'
+                };
+                // 兼容旧数据：如果 lyrics 是字符串，尝试转换或清空
+                if (typeof state.music.lyrics === 'string') {
+                    state.music.lyricsData = [
+                        { time: 0, text: state.music.lyrics.split('\n')[0] || "暂无歌词" }
+                    ];
+                    delete state.music.lyrics;
+                }
+
                 // 重置临时 UI 状态，避免加载后处于多选或已选中状态
                 state.isMultiSelectMode = false;
                 state.selectedMessages = new Set();
@@ -7139,6 +7718,8 @@ ${itineraryContext}
                 renderWorldbookCategoryList();
                 renderMeTab();
                 renderMoments();
+                initMusicWidget();
+                initPolaroidWidget();
             }
         } catch (e) {
             console.error('加载配置失败:', e);
@@ -7196,6 +7777,7 @@ ${itineraryContext}
                 if (!state.iconColors) state.iconColors = {};
                 if (!state.iconPresets) state.iconPresets = [];
                 if (!state.stickerCategories) state.stickerCategories = [];
+                if (!state.contactGroups) state.contactGroups = [];
                 
                 // 修正当前选中的表情包分类
                 if (state.currentStickerCategoryId !== 'all' && !state.stickerCategories.find(c => c.id === state.currentStickerCategoryId)) {
@@ -7812,5 +8394,116 @@ ${itineraryContext}
         renderStickerList();
         modal.classList.add('hidden');
         alert('已删除所选分类');
+    }
+
+    // --- 分组功能 ---
+
+    function openGroupSelect() {
+        renderGroupList();
+        document.getElementById('group-select-modal').classList.remove('hidden');
+    }
+
+    function renderGroupList() {
+        const list = document.getElementById('group-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        // 添加“未分组”选项
+        const noGroupItem = document.createElement('div');
+        noGroupItem.className = 'list-item center-content';
+        noGroupItem.textContent = '未分组';
+        if (!state.tempSelectedGroup) {
+            noGroupItem.style.color = '#007AFF';
+            noGroupItem.style.fontWeight = 'bold';
+        }
+        noGroupItem.onclick = () => handleSelectGroup('');
+        list.appendChild(noGroupItem);
+
+        if (state.contactGroups && state.contactGroups.length > 0) {
+            state.contactGroups.forEach(group => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                
+                const content = document.createElement('div');
+                content.className = 'list-content';
+                content.style.justifyContent = 'center';
+                content.textContent = group;
+                
+                if (state.tempSelectedGroup === group) {
+                    content.style.color = '#007AFF';
+                    content.style.fontWeight = 'bold';
+                }
+
+                // 添加删除按钮（可选，这里简单实现长按删除或右侧删除图标，为了简洁先只做点击选择）
+                // 为了支持删除，我们添加一个删除图标在右侧
+                const deleteBtn = document.createElement('i');
+                deleteBtn.className = 'fas fa-trash';
+                deleteBtn.style.color = '#FF3B30';
+                deleteBtn.style.marginLeft = '10px';
+                deleteBtn.style.fontSize = '14px';
+                deleteBtn.style.padding = '5px';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    handleDeleteGroup(group);
+                };
+
+                // 重新布局 item
+                item.style.justifyContent = 'space-between';
+                item.innerHTML = ''; // 清空
+                
+                // 左侧占位，保持文字居中
+                const leftSpacer = document.createElement('div');
+                leftSpacer.style.width = '24px';
+                item.appendChild(leftSpacer);
+
+                item.appendChild(content);
+                item.appendChild(deleteBtn);
+
+                item.onclick = () => handleSelectGroup(group);
+                list.appendChild(item);
+            });
+        }
+    }
+
+    function handleCreateGroup() {
+        const name = prompt('请输入新分组名称：');
+        if (!name) return;
+        
+        if (state.contactGroups.includes(name)) {
+            alert('分组已存在');
+            return;
+        }
+        
+        state.contactGroups.push(name);
+        saveConfig();
+        renderGroupList();
+    }
+
+    function handleDeleteGroup(groupName) {
+        if (confirm(`确定要删除分组 "${groupName}" 吗？`)) {
+            state.contactGroups = state.contactGroups.filter(g => g !== groupName);
+            
+            // 如果当前选中的是该分组，重置为未分组
+            if (state.tempSelectedGroup === groupName) {
+                state.tempSelectedGroup = '';
+                document.getElementById('chat-setting-group-value').textContent = '未分组';
+            }
+            
+            // 更新所有使用该分组的联系人
+            state.contacts.forEach(c => {
+                if (c.group === groupName) {
+                    c.group = '';
+                }
+            });
+            
+            saveConfig();
+            renderGroupList();
+        }
+    }
+
+    function handleSelectGroup(groupName) {
+        state.tempSelectedGroup = groupName;
+        document.getElementById('chat-setting-group-value').textContent = groupName || '未分组';
+        document.getElementById('group-select-modal').classList.add('hidden');
     }
 });
