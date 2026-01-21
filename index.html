@@ -1248,7 +1248,7 @@
                 
                 <!-- 1. 顶部：聊天预览 -->
                 <div style="display: flex; justify-content: center;">
-                    <div id="chat-preview-container" style="width: 300px; height: 600px; border: 12px solid #333; border-radius: 40px; position: relative; overflow: hidden; background-color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+                    <div id="chat-preview-container" style="width: 100%; max-width: 375px; height: 667px; border: 1px solid #e5e5ea; border-radius: 0; position: relative; overflow: hidden; background-color: #f2f2f7; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
                         <!-- 模拟状态栏 -->
                         <div class="status-bar" style="position: absolute; top: 0; width: 100%; z-index: 10;">
                             <div class="time">9:41</div>
@@ -1269,27 +1269,27 @@
                         <!-- 消息区域 (复用 chat-body 类) -->
                         <div id="preview-messages" class="chat-body" style="flex: 1; overflow-y: auto; padding-top: 91px; padding-bottom: 60px; background-color: #f2f2f7;">
                             <!-- AI 消息 -->
-                            <div class="chat-message other">
+                            <div id="preview-ai-row" class="chat-message other">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="chat-avatar">
                                 <div class="msg-wrapper">
-                                    <div class="message-content">你好，这是预览消息。</div>
+                                    <div id="preview-ai-bubble" class="message-content">你好，这是预览消息。</div>
                                 </div>
                             </div>
                             <!-- 用户消息 -->
-                            <div class="chat-message user">
+                            <div id="preview-user-row" class="chat-message user">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="chat-avatar">
                                 <div class="msg-wrapper">
-                                    <div class="message-content">好的，我看到了。</div>
+                                    <div id="preview-user-bubble" class="message-content">好的，我看到了。</div>
                                 </div>
                             </div>
                             <!-- 转账消息 -->
-                            <div class="chat-message user">
+                            <div id="preview-transfer-row" class="chat-message user">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="chat-avatar">
                                 <div class="msg-wrapper">
                                     <div class="message-content transfer-msg">
-                                        <div class="transfer-card">
+                                        <div id="preview-transfer-card" class="transfer-card">
                                             <div class="transfer-top">
-                                                <div class="transfer-icon"><i class="fas fa-exchange-alt"></i></div>
+                                                <div id="preview-transfer-icon" class="transfer-icon"><i class="fas fa-exchange-alt"></i></div>
                                                 <div class="transfer-info">
                                                     <div class="transfer-amount">¥100.00</div>
                                                     <div class="transfer-remark">转账给你</div>
@@ -1323,8 +1323,8 @@
                         <div class="nav-item" style="color: #888; cursor: pointer; white-space: nowrap;">颜色主题</div>
                     </div>
 
-                    <!-- 控件区域 (第一部分) -->
-                    <div id="controls-section-1">
+                    <!-- 控件区域 (第一部分：顶栏和底栏) -->
+                    <div id="controls-section-1" class="customize-section">
                         <div class="setting-group">
                             <div style="display: flex; gap: 10px;">
                                 <div style="flex: 1;">
@@ -1474,6 +1474,170 @@
                         <div class="setting-group" style="margin-top: 20px; display: flex; gap: 10px;">
                             <button id="apply-to-global-btn" class="ios-btn-block" style="background-color: #007AFF; flex: 1;">应用到全局</button>
                             <button id="reset-theme-btn" class="ios-btn-block danger" style="flex: 1;">重置全部</button>
+                        </div>
+                    </div>
+
+                    <!-- 控件区域 (第二部分：消息样式) -->
+                    <div id="controls-section-2" class="customize-section hidden">
+                        <!-- AI 气泡设置 -->
+                        <div class="section-title">AI 气泡 (左侧)</div>
+                        <div class="setting-group">
+                            <div style="display: flex; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <label>背景颜色</label>
+                                    <input type="color" id="ctrl-ai-bg-color" value="#E5E5EA" style="width: 100%; height: 40px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>文字颜色</label>
+                                    <input type="color" id="ctrl-ai-text-color" value="#000000" style="width: 100%; height: 40px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>圆角 (左上, 右上, 右下, 左下)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="range" id="ctrl-ai-radius-tl" min="0" max="30" value="18" title="左上">
+                                <input type="range" id="ctrl-ai-radius-tr" min="0" max="30" value="18" title="右上">
+                                <input type="range" id="ctrl-ai-radius-br" min="0" max="30" value="18" title="右下">
+                                <input type="range" id="ctrl-ai-radius-bl" min="0" max="30" value="18" title="左下">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>内边距 (上, 右, 下, 左)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="range" id="ctrl-ai-padding-t" min="0" max="30" value="8" title="上">
+                                <input type="range" id="ctrl-ai-padding-r" min="0" max="30" value="12" title="右">
+                                <input type="range" id="ctrl-ai-padding-b" min="0" max="30" value="8" title="下">
+                                <input type="range" id="ctrl-ai-padding-l" min="0" max="30" value="12" title="左">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>消息间隔 (Margin Bottom: <span id="val-ai-margin">10</span>px)</label>
+                            <input type="range" id="ctrl-ai-margin" min="0" max="50" value="10" style="width: 100%;">
+                        </div>
+                        <div class="setting-group">
+                            <label>位置偏移 (X, Y)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="range" id="ctrl-ai-x" min="-50" max="50" value="0" style="flex: 1;">
+                                <input type="range" id="ctrl-ai-y" min="-20" max="20" value="0" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>阴影 (Blur, Color)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="range" id="ctrl-ai-shadow-blur" min="0" max="20" value="0" style="flex: 1;">
+                                <input type="color" id="ctrl-ai-shadow-color" value="#000000" style="width: 50px; height: 40px;">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸/背景图 URL</label>
+                            <input type="url" id="ctrl-ai-bg-img" placeholder="https://...">
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸大小 (<span id="val-ai-bg-size">100</span>%)</label>
+                            <input type="range" id="ctrl-ai-bg-size" min="10" max="200" value="100" style="width: 100%;">
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸位置 (X, Y)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="range" id="ctrl-ai-bg-x" min="0" max="100" value="50" style="flex: 1;">
+                                <input type="range" id="ctrl-ai-bg-y" min="0" max="100" value="50" style="flex: 1;">
+                            </div>
+                        </div>
+
+                        <!-- 用户气泡设置 -->
+                        <div class="section-title" style="margin-top: 30px;">用户气泡 (右侧)</div>
+                        <div class="setting-group">
+                            <div style="display: flex; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <label>背景颜色</label>
+                                    <input type="color" id="ctrl-user-bg-color" value="#007AFF" style="width: 100%; height: 40px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>文字颜色</label>
+                                    <input type="color" id="ctrl-user-text-color" value="#FFFFFF" style="width: 100%; height: 40px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>圆角 (左上, 右上, 右下, 左下)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="range" id="ctrl-user-radius-tl" min="0" max="30" value="18" title="左上">
+                                <input type="range" id="ctrl-user-radius-tr" min="0" max="30" value="18" title="右上">
+                                <input type="range" id="ctrl-user-radius-br" min="0" max="30" value="18" title="右下">
+                                <input type="range" id="ctrl-user-radius-bl" min="0" max="30" value="18" title="左下">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>内边距 (上, 右, 下, 左)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="range" id="ctrl-user-padding-t" min="0" max="30" value="8" title="上">
+                                <input type="range" id="ctrl-user-padding-r" min="0" max="30" value="12" title="右">
+                                <input type="range" id="ctrl-user-padding-b" min="0" max="30" value="8" title="下">
+                                <input type="range" id="ctrl-user-padding-l" min="0" max="30" value="12" title="左">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>消息间隔 (Margin Bottom: <span id="val-user-margin">10</span>px)</label>
+                            <input type="range" id="ctrl-user-margin" min="0" max="50" value="10" style="width: 100%;">
+                        </div>
+                        <div class="setting-group">
+                            <label>位置偏移 (X, Y)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="range" id="ctrl-user-x" min="-50" max="50" value="0" style="flex: 1;">
+                                <input type="range" id="ctrl-user-y" min="-20" max="20" value="0" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>阴影 (Blur, Color)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="range" id="ctrl-user-shadow-blur" min="0" max="20" value="0" style="flex: 1;">
+                                <input type="color" id="ctrl-user-shadow-color" value="#000000" style="width: 50px; height: 40px;">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸/背景图 URL</label>
+                            <input type="url" id="ctrl-user-bg-img" placeholder="https://...">
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸大小 (<span id="val-user-bg-size">100</span>%)</label>
+                            <input type="range" id="ctrl-user-bg-size" min="10" max="200" value="100" style="width: 100%;">
+                        </div>
+                        <div class="setting-group">
+                            <label>贴纸位置 (X, Y)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="range" id="ctrl-user-bg-x" min="0" max="100" value="50" style="flex: 1;">
+                                <input type="range" id="ctrl-user-bg-y" min="0" max="100" value="50" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 控件区域 (第三部分：颜色主题/转账) -->
+                    <div id="controls-section-3" class="customize-section hidden">
+                        <div class="section-title">转账卡片样式</div>
+                        <div class="setting-group">
+                            <div style="display: flex; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <label>背景颜色</label>
+                                    <input type="color" id="ctrl-transfer-bg" value="#FFFFFF" style="width: 100%; height: 40px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>文字颜色</label>
+                                    <input type="color" id="ctrl-transfer-text" value="#000000" style="width: 100%; height: 40px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label>圆角 (<span id="val-transfer-radius">12</span>px)</label>
+                            <input type="range" id="ctrl-transfer-radius" min="0" max="30" value="12" style="width: 100%;">
+                        </div>
+                        <div class="setting-group">
+                            <label>图标背景色</label>
+                            <input type="color" id="ctrl-transfer-icon-bg" value="#000000" style="width: 100%; height: 40px;">
+                        </div>
+                        <div class="setting-group">
+                            <label>图标颜色</label>
+                            <input type="color" id="ctrl-transfer-icon-color" value="#FFFFFF" style="width: 100%; height: 40px;">
                         </div>
                     </div>
                 </div>

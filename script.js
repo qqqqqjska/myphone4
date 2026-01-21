@@ -1133,7 +1133,56 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'ctrl-menu-icon', target: 'preview-menu-btn', type: 'icon' },
             { id: 'ctrl-plus-icon', target: 'preview-plus-btn', type: 'icon' },
             { id: 'ctrl-emoji-icon', target: 'preview-emoji-btn', type: 'icon' },
-            { id: 'ctrl-send-icon', target: 'preview-send-btn', type: 'icon' }
+            { id: 'ctrl-send-icon', target: 'preview-send-btn', type: 'icon' },
+
+            // AI 气泡
+            { id: 'ctrl-ai-bg-color', target: 'preview-ai-bubble', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-ai-text-color', target: 'preview-ai-bubble', prop: 'color', type: 'color' },
+            { id: 'ctrl-ai-radius-tl', target: 'preview-ai-bubble', prop: 'borderTopLeftRadius', type: 'px' },
+            { id: 'ctrl-ai-radius-tr', target: 'preview-ai-bubble', prop: 'borderTopRightRadius', type: 'px' },
+            { id: 'ctrl-ai-radius-br', target: 'preview-ai-bubble', prop: 'borderBottomRightRadius', type: 'px' },
+            { id: 'ctrl-ai-radius-bl', target: 'preview-ai-bubble', prop: 'borderBottomLeftRadius', type: 'px' },
+            { id: 'ctrl-ai-padding-t', target: 'preview-ai-bubble', prop: 'paddingTop', type: 'px' },
+            { id: 'ctrl-ai-padding-r', target: 'preview-ai-bubble', prop: 'paddingRight', type: 'px' },
+            { id: 'ctrl-ai-padding-b', target: 'preview-ai-bubble', prop: 'paddingBottom', type: 'px' },
+            { id: 'ctrl-ai-padding-l', target: 'preview-ai-bubble', prop: 'paddingLeft', type: 'px' },
+            { id: 'ctrl-ai-margin', target: 'preview-ai-row', prop: 'marginBottom', type: 'px' },
+            { id: 'ctrl-ai-x', target: 'preview-ai-bubble', type: 'transform-x', pair: 'ctrl-ai-y' },
+            { id: 'ctrl-ai-y', target: 'preview-ai-bubble', type: 'transform-y', pair: 'ctrl-ai-x' },
+            { id: 'ctrl-ai-shadow-blur', target: 'preview-ai-bubble', type: 'shadow-blur', pair: 'ctrl-ai-shadow-color' },
+            { id: 'ctrl-ai-shadow-color', target: 'preview-ai-bubble', type: 'shadow-color', pair: 'ctrl-ai-shadow-blur' },
+            { id: 'ctrl-ai-bg-img', target: 'preview-ai-bubble', type: 'bg-img' },
+            { id: 'ctrl-ai-bg-size', target: 'preview-ai-bubble', type: 'bg-size' },
+            { id: 'ctrl-ai-bg-x', target: 'preview-ai-bubble', type: 'bg-pos-x', pair: 'ctrl-ai-bg-y' },
+            { id: 'ctrl-ai-bg-y', target: 'preview-ai-bubble', type: 'bg-pos-y', pair: 'ctrl-ai-bg-x' },
+
+            // 用户气泡
+            { id: 'ctrl-user-bg-color', target: 'preview-user-bubble', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-user-text-color', target: 'preview-user-bubble', prop: 'color', type: 'color' },
+            { id: 'ctrl-user-radius-tl', target: 'preview-user-bubble', prop: 'borderTopLeftRadius', type: 'px' },
+            { id: 'ctrl-user-radius-tr', target: 'preview-user-bubble', prop: 'borderTopRightRadius', type: 'px' },
+            { id: 'ctrl-user-radius-br', target: 'preview-user-bubble', prop: 'borderBottomRightRadius', type: 'px' },
+            { id: 'ctrl-user-radius-bl', target: 'preview-user-bubble', prop: 'borderBottomLeftRadius', type: 'px' },
+            { id: 'ctrl-user-padding-t', target: 'preview-user-bubble', prop: 'paddingTop', type: 'px' },
+            { id: 'ctrl-user-padding-r', target: 'preview-user-bubble', prop: 'paddingRight', type: 'px' },
+            { id: 'ctrl-user-padding-b', target: 'preview-user-bubble', prop: 'paddingBottom', type: 'px' },
+            { id: 'ctrl-user-padding-l', target: 'preview-user-bubble', prop: 'paddingLeft', type: 'px' },
+            { id: 'ctrl-user-margin', target: 'preview-user-row', prop: 'marginBottom', type: 'px' },
+            { id: 'ctrl-user-x', target: 'preview-user-bubble', type: 'transform-x', pair: 'ctrl-user-y' },
+            { id: 'ctrl-user-y', target: 'preview-user-bubble', type: 'transform-y', pair: 'ctrl-user-x' },
+            { id: 'ctrl-user-shadow-blur', target: 'preview-user-bubble', type: 'shadow-blur', pair: 'ctrl-user-shadow-color' },
+            { id: 'ctrl-user-shadow-color', target: 'preview-user-bubble', type: 'shadow-color', pair: 'ctrl-user-shadow-blur' },
+            { id: 'ctrl-user-bg-img', target: 'preview-user-bubble', type: 'bg-img' },
+            { id: 'ctrl-user-bg-size', target: 'preview-user-bubble', type: 'bg-size' },
+            { id: 'ctrl-user-bg-x', target: 'preview-user-bubble', type: 'bg-pos-x', pair: 'ctrl-user-bg-y' },
+            { id: 'ctrl-user-bg-y', target: 'preview-user-bubble', type: 'bg-pos-y', pair: 'ctrl-user-bg-x' },
+
+            // 转账卡片
+            { id: 'ctrl-transfer-bg', target: 'preview-transfer-card', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-transfer-text', target: 'preview-transfer-card', prop: 'color', type: 'color' },
+            { id: 'ctrl-transfer-radius', target: 'preview-transfer-card', prop: 'borderRadius', type: 'px' },
+            { id: 'ctrl-transfer-icon-bg', target: 'preview-transfer-icon', prop: 'backgroundColor', type: 'color' },
+            { id: 'ctrl-transfer-icon-color', target: 'preview-transfer-icon', prop: 'color', type: 'color' }
         ];
 
         controls.forEach(ctrl => {
@@ -1221,6 +1270,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // 导航栏切换逻辑
+        const navItems = document.querySelectorAll('#customize-nav .nav-item');
+        const sections = document.querySelectorAll('.customize-section');
+
+        navItems.forEach((item, index) => {
+            item.addEventListener('click', () => {
+                // 移除所有 active 样式
+                navItems.forEach(nav => {
+                    nav.classList.remove('active');
+                    nav.style.fontWeight = 'normal';
+                    nav.style.color = '#888';
+                    nav.style.borderBottom = 'none';
+                });
+
+                // 隐藏所有 section
+                sections.forEach(sec => sec.classList.add('hidden'));
+
+                // 激活当前
+                item.classList.add('active');
+                item.style.fontWeight = 'bold';
+                item.style.color = '#000';
+                item.style.borderBottom = '2px solid #000';
+
+                // 显示对应 section
+                if (sections[index]) {
+                    sections[index].classList.remove('hidden');
+                }
+            });
+        });
+
         // 初始化 CSS
         generateCSS(controls);
     }
@@ -1263,20 +1342,55 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (['preview-plus-btn', 'preview-emoji-btn', 'preview-send-btn'].includes(ctrl.target)) defaultTransform = 'translateY(-50%)';
             
             target.style.transform = `${defaultTransform} translate(${x}px, ${y}px)`;
-        } else if (ctrl.type === 'icon') {
-            // 按钮内部图标替换
-            if (value) {
-                target.innerHTML = `<img src="${value}" style="width: 1em; height: 1em; object-fit: contain; font-size: inherit;">`;
-            } else {
-                // 恢复默认
-                if (ctrl.id === 'ctrl-back-icon') target.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                if (ctrl.id === 'ctrl-menu-icon') target.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
-                if (ctrl.id === 'ctrl-plus-icon') target.innerHTML = '<i class="fas fa-plus-circle"></i>';
-                if (ctrl.id === 'ctrl-emoji-icon') target.innerHTML = '<i class="far fa-smile"></i>';
-                if (ctrl.id === 'ctrl-send-icon') target.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            } else if (ctrl.type === 'icon') {
+                // 按钮内部图标替换
+                if (value) {
+                    target.innerHTML = `<img src="${value}" style="width: 1em; height: 1em; object-fit: contain; font-size: inherit;">`;
+                } else {
+                    // 恢复默认
+                    if (ctrl.id === 'ctrl-back-icon') target.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                    if (ctrl.id === 'ctrl-menu-icon') target.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
+                    if (ctrl.id === 'ctrl-plus-icon') target.innerHTML = '<i class="fas fa-plus-circle"></i>';
+                    if (ctrl.id === 'ctrl-emoji-icon') target.innerHTML = '<i class="far fa-smile"></i>';
+                    if (ctrl.id === 'ctrl-send-icon') target.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                }
+            } else if (ctrl.type === 'color') {
+                target.style[ctrl.prop] = value;
+                // 特殊处理转账文字颜色，需要应用到内部元素
+                if (ctrl.id === 'ctrl-transfer-text') {
+                    const info = target.querySelector('.transfer-info');
+                    if (info) info.style.color = value;
+                }
+            } else if (ctrl.type === 'shadow-blur' || ctrl.type === 'shadow-color') {
+                const blurInput = document.getElementById(ctrl.type === 'shadow-blur' ? ctrl.id : ctrl.pair);
+                const colorInput = document.getElementById(ctrl.type === 'shadow-color' ? ctrl.id : ctrl.pair);
+                const blur = blurInput ? blurInput.value : 0;
+                const color = colorInput ? colorInput.value : '#000000';
+                if (blur > 0) {
+                    target.style.boxShadow = `0 2px ${blur}px ${color}`;
+                } else {
+                    target.style.boxShadow = 'none';
+                }
+            } else if (ctrl.type === 'bg-img') {
+                if (value) {
+                    target.style.backgroundImage = `url('${value}')`;
+                    target.style.backgroundRepeat = 'no-repeat';
+                    // 默认居中和覆盖，除非被其他控件覆盖
+                    if (!target.style.backgroundPosition) target.style.backgroundPosition = 'center';
+                    if (!target.style.backgroundSize) target.style.backgroundSize = 'cover';
+                } else {
+                    target.style.backgroundImage = '';
+                }
+            } else if (ctrl.type === 'bg-size') {
+                target.style.backgroundSize = `${value}%`;
+            } else if (ctrl.type === 'bg-pos-x' || ctrl.type === 'bg-pos-y') {
+                const xInput = document.getElementById(ctrl.type === 'bg-pos-x' ? ctrl.id : ctrl.pair);
+                const yInput = document.getElementById(ctrl.type === 'bg-pos-y' ? ctrl.id : ctrl.pair);
+                const x = xInput ? xInput.value : 50;
+                const y = yInput ? yInput.value : 50;
+                target.style.backgroundPosition = `${x}% ${y}%`;
             }
         }
-    }
 
     function generateCSS(controls) {
         let css = '/* 自定义主题 CSS */\n\n';
@@ -1353,6 +1467,95 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             else if (ctrl.type.includes('icon')) {
                 css += `/* 图标替换 (${ctrl.id}) - 建议使用 JS 替换或 background-image 覆盖 */\n`;
+            } else if (ctrl.type === 'color') {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                else if (ctrl.target === 'preview-transfer-card') selector = '.message-content.transfer-msg';
+                else if (ctrl.target === 'preview-transfer-icon') selector = '.transfer-icon';
+
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};\n}\n\n`;
+                    // 特殊处理转账文字颜色
+                    if (ctrl.id === 'ctrl-transfer-text') {
+                        css += `.transfer-info {\n    color: ${value};\n}\n\n`;
+                    }
+                }
+            } else if (ctrl.type === 'px' && ctrl.prop.includes('Radius')) {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                else if (ctrl.target === 'preview-transfer-card') selector = '.message-content.transfer-msg';
+                
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'px' && ctrl.prop.includes('padding')) {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                
+                if (selector) {
+                    css += `${selector} {\n    ${ctrl.prop.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'px' && ctrl.prop === 'marginBottom') {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-row') selector = '.chat-message.other';
+                else if (ctrl.target === 'preview-user-row') selector = '.chat-message.user';
+                
+                if (selector) {
+                    css += `${selector} {\n    margin-bottom: ${value}px;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'shadow-blur' || ctrl.type === 'shadow-color') {
+                if (processedTransforms.has(ctrl.target + '-shadow')) return;
+                processedTransforms.add(ctrl.target + '-shadow');
+                
+                const blurInput = document.getElementById(ctrl.type === 'shadow-blur' ? ctrl.id : ctrl.pair);
+                const colorInput = document.getElementById(ctrl.type === 'shadow-color' ? ctrl.id : ctrl.pair);
+                const blur = blurInput ? blurInput.value : 0;
+                const color = colorInput ? colorInput.value : '#000000';
+                
+                if (blur > 0) {
+                    let selector = '';
+                    if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                    else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                    
+                    if (selector) {
+                        css += `${selector} {\n    box-shadow: 0 2px ${blur}px ${color};\n}\n\n`;
+                    }
+                }
+            } else if (ctrl.type === 'bg-img') {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                
+                if (selector && value) {
+                    css += `${selector} {\n    background-image: url('${value}');\n    background-repeat: no-repeat;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'bg-size') {
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                
+                if (selector) {
+                    css += `${selector} {\n    background-size: ${value}%;\n}\n\n`;
+                }
+            } else if (ctrl.type === 'bg-pos-x' || ctrl.type === 'bg-pos-y') {
+                if (processedTransforms.has(ctrl.target + '-bgpos')) return;
+                processedTransforms.add(ctrl.target + '-bgpos');
+                
+                const xInput = document.getElementById(ctrl.type === 'bg-pos-x' ? ctrl.id : ctrl.pair);
+                const yInput = document.getElementById(ctrl.type === 'bg-pos-y' ? ctrl.id : ctrl.pair);
+                const x = xInput ? xInput.value : 50;
+                const y = yInput ? yInput.value : 50;
+                
+                let selector = '';
+                if (ctrl.target === 'preview-ai-bubble') selector = '.chat-message.other .message-content';
+                else if (ctrl.target === 'preview-user-bubble') selector = '.chat-message.user .message-content';
+                
+                if (selector) {
+                    css += `${selector} {\n    background-position: ${x}% ${y}%;\n}\n\n`;
+                }
             }
         });
 
