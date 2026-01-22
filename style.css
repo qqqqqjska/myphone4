@@ -3690,7 +3690,7 @@ input.msg-select-checkbox {
     /* 6行，每行高度固定80px，间距自适应 */
     grid-template-rows: repeat(6, 85px); 
     gap: 20px 15px; /* 行间距25px，列间距15px */
-    padding: 60px 20px 80px 20px; /* 顶部留白60px避开灵动岛，底部留白给 Dock */
+    padding: 70px 20px 80px 20px; /* 顶部留白60px避开灵动岛，底部留白给 Dock */
     width: 100%;
     box-sizing: border-box;
     position: relative;
