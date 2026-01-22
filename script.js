@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             key: '',
             model: '',
             temperature: 0.7
+            
         },
         aiPresets2: [],
         chatWallpapers: [], // { id, data }
@@ -85,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isMultiSelectMode: false,
         selectedMessages: new Set() // 存储选中的消息ID
     };
+
+    // 暴露 state 给全局，以便底部的 grid 系统访问
+    window.iphoneSimState = state;
 
     // DOM 元素
     const appScreen = document.getElementById('theme-app');
@@ -155,17 +159,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const screenContainer = document.getElementById('screen-container');
 
-    // 应用列表配置
-    const appList = [
-        { id: 'icon-envelope', name: '信息', selector: '.icon-envelope' },
-        { id: 'icon-wechat', name: '微信', selector: '.icon-wechat' },
-        { id: 'icon-world', name: '世界书', selector: '.icon-world' },
-        { id: 'icon-settings', name: '设置', selector: '.icon-settings' },
-        { id: 'icon-theme', name: '美化', selector: '.icon-theme' },
-        { id: 'icon-shopping', name: '购物', selector: '.icon-shopping' },
-        { id: 'icon-forum', name: '论坛', selector: '.icon-forum' },
-        { id: 'icon-phone', name: '查手机', selector: '.icon-phone' }
-    ];
+    // 已知应用配置 (用于图标设置和默认值)
+    const knownApps = {
+        'wechat-app': { name: '微信', icon: 'fab fa-weixin', color: '#07C160' },
+        'worldbook-app': { name: '世界书', icon: 'fas fa-globe', color: '#007AFF' },
+        'settings-app': { name: '设置', icon: 'fas fa-cog', color: '#8E8E93' },
+        'theme-app': { name: '美化', icon: 'fas fa-paint-brush', color: '#5856D6' },
+        'shopping-app': { name: '购物', icon: 'fas fa-shopping-bag', color: '#FF9500' },
+        'forum-app': { name: '论坛', icon: 'fas fa-comments', color: '#30B0C7' },
+        'phone-app': { name: '查手机', icon: 'fas fa-mobile-alt', color: '#34C759' },
+        'message-app': { name: '信息', icon: 'fas fa-envelope', color: '#007AFF' }
+    };
 
     // 图片压缩工具
     function compressImage(file, maxWidth = 1024, quality = 0.7) {
@@ -198,26 +202,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 处理应用点击
-    function handleAppClick(app) {
-        console.log('App clicked:', app.name);
+    function handleAppClick(appId, appName) {
+        console.log('App clicked:', appName, appId);
         
-        // 定义应用ID到全屏页面ID的映射
-        const appMap = {
-            'icon-theme': 'theme-app',
-            'icon-settings': 'settings-app',
-            'icon-wechat': 'wechat-app',
-            'icon-world': 'worldbook-app'
-        };
-
-        const screenId = appMap[app.id];
-        
-        if (screenId) {
-            const screen = document.getElementById(screenId);
-            if (screen) {
-                screen.classList.remove('hidden');
-            }
+        // appId 直接对应全屏页面的 ID
+        const screen = document.getElementById(appId);
+        if (screen) {
+            screen.classList.remove('hidden');
         } else {
-            alert(`${app.name} 功能开发中...`);
+            alert(`${appName || '应用'} 功能开发中...`);
         }
     }
 
@@ -466,19 +459,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         console.log('Setting up event listeners');
         
-        // 统一绑定应用图标点击事件
-        appList.forEach(app => {
-            // 通过选择器找到图标元素
-            const iconEl = document.querySelector(app.selector);
-            if (iconEl) {
-                // 找到最近的 .app-item 父元素作为点击目标
-                const appItem = iconEl.closest('.app-item');
-                if (appItem) {
-                    // 移除旧的监听器（如果有）并添加新的
-                    appItem.onclick = () => handleAppClick(app);
-                    appItem.style.cursor = 'pointer';
-                }
-            }
+        // 绑定 Dock 栏应用点击事件
+        document.querySelectorAll('.dock-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const appId = item.dataset.appId;
+                const appName = item.querySelector('.app-label')?.textContent;
+                handleAppClick(appId, appName);
+            });
         });
 
         // 绑定关闭按钮事件
@@ -985,10 +972,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const resetIconsBtn = document.getElementById('reset-icons');
         if (resetIconsBtn) {
             resetIconsBtn.addEventListener('click', () => {
-                state.icons = {};
-                applyIcons();
+                if (confirm('确定要重置所有图标和颜色吗？')) {
+                    state.icons = {};
+                    state.iconColors = {};
+                    applyIcons();
+                    saveConfig();
+                    renderIconSettings();
+                    alert('已重置所有图标');
+                }
+            });
+        }
+
+        const saveIconsBtn = document.getElementById('save-icons-btn');
+        if (saveIconsBtn) {
+            saveIconsBtn.addEventListener('click', () => {
                 saveConfig();
-                renderIconSettings();
+                applyIcons();
+                alert('图标配置已保存并应用');
             });
         }
 
@@ -7068,61 +7068,65 @@ ${itineraryContext}
         
         list.innerHTML = '';
 
-        appList.forEach(app => {
+        // 收集所有需要显示的应用
+        // 1. 从 knownApps 中获取基础信息
+        // 2. 检查 homeScreenData 和 Dock 栏，确保所有在用的应用都在列表中
+        
+        const appsToShow = new Set(Object.keys(knownApps));
+        
+        // 遍历 homeScreenData 添加可能的自定义应用 (如果有)
+        if (typeof homeScreenData !== 'undefined') {
+            homeScreenData.forEach(item => {
+                if (item.type === 'app' && item.appId) {
+                    appsToShow.add(item.appId);
+                }
+            });
+        }
+
+        appsToShow.forEach(appId => {
+            const appInfo = knownApps[appId] || { name: '未知应用', icon: 'fas fa-question', color: '#ccc' };
+            
             const item = document.createElement('div');
             item.className = 'list-item';
             
-            const currentIcon = state.icons[app.id];
-            const currentColor = state.iconColors[app.id] || '#ffffff'; // 默认白色，虽然CSS默认可能是其他
+            const currentIcon = state.icons[appId];
+            const currentColor = state.iconColors[appId] || appInfo.color;
             let previewContent = '';
             
-            // 安全地获取预览内容
             if (currentIcon) {
-                previewContent = `<img src="${currentIcon}">`;
+                previewContent = `<img src="${currentIcon}" style="width:100%;height:100%;object-fit:cover;">`;
             } else {
-                const el = document.querySelector(app.selector + ' i');
-                if (el) {
-                    previewContent = `<i class="${el.className}"></i>`;
-                } else {
-                    // 如果找不到i标签（可能已经被替换为img但state中没有记录），尝试恢复默认
-                    previewContent = '<i class="fas fa-question"></i>';
-                }
+                previewContent = `<i class="${appInfo.icon}" style="color: ${currentColor === '#ffffff' ? '#000' : '#fff'}"></i>`;
             }
 
             item.innerHTML = `
                 <div class="icon-row">
-                    <div class="icon-preview-small" id="preview-${app.id}" style="background-color: ${currentColor};">
+                    <div class="icon-preview-small" id="preview-${appId}" style="background-color: ${currentColor};">
                         ${previewContent}
                     </div>
                     <div class="icon-info column">
-                        <span>${app.name}</span>
+                        <span>${appInfo.name}</span>
                         <div class="color-picker-row" style="margin-top: 5px; display: flex; align-items: center; gap: 5px;">
                             <span style="font-size: 12px; color: #888;">背景色:</span>
-                            <input type="color" class="color-picker-input" value="${currentColor}" data-id="${app.id}" style="width: 30px; height: 20px; padding: 0; border: none;">
+                            <input type="color" class="color-picker-input" value="${currentColor}" data-id="${appId}" style="width: 30px; height: 20px; padding: 0; border: none;">
                         </div>
                     </div>
                     <div class="icon-actions">
-                        <input type="file" id="upload-${app.id}" accept="image/*" class="file-input-hidden">
-                        <label for="upload-${app.id}" class="ios-btn">更换</label>
-                        ${currentIcon || state.iconColors[app.id] ? `<button class="ios-btn-small danger" onclick="resetAppIcon('${app.id}')">还原</button>` : ''}
+                        <input type="file" id="upload-${appId}" accept="image/*" class="file-input-hidden">
+                        <label for="upload-${appId}" class="ios-btn">更换</label>
+                        ${currentIcon || state.iconColors[appId] ? `<button class="ios-btn-small danger" onclick="resetAppIcon('${appId}')">还原</button>` : ''}
                     </div>
                 </div>
             `;
 
             // 绑定上传事件
             const input = item.querySelector('input[type="file"]');
-            input.addEventListener('change', (e) => handleIconUpload(e, app.id));
+            input.addEventListener('change', (e) => handleIconUpload(e, appId));
             
             // 绑定颜色选择事件
             const colorInput = item.querySelector('input[type="color"]');
-            colorInput.addEventListener('input', (e) => handleIconColorChange(e, app.id));
+            colorInput.addEventListener('input', (e) => handleIconColorChange(e, appId));
             
-            // 绑定还原事件
-            const resetBtn = item.querySelector('button');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => resetAppIcon(app.id));
-            }
-
             list.appendChild(item);
         });
     }
@@ -7147,13 +7151,17 @@ ${itineraryContext}
         
         // 实时更新预览
         const preview = document.getElementById(`preview-${appId}`);
-        if (preview) preview.style.backgroundColor = color;
+        if (preview) {
+            preview.style.backgroundColor = color;
+            // 如果是默认图标，可能需要调整图标颜色以保持对比度
+            const icon = preview.querySelector('i');
+            if (icon) {
+                icon.style.color = color === '#ffffff' ? '#000' : '#fff';
+            }
+        }
         
         applyIcons();
         saveConfig();
-        
-        // 如果之前没有还原按钮，现在有了颜色修改，应该显示还原按钮
-        // 为了简单，这里不重新渲染整个列表，只是保存配置
     }
 
     window.resetAppIcon = function(appId) {
@@ -7165,36 +7173,33 @@ ${itineraryContext}
     };
 
     function applyIcons() {
-        appList.forEach(app => {
-            const el = document.querySelector(app.selector);
-            if (!el) return;
-            
-            const iconData = state.icons[app.id];
-            const iconColor = state.iconColors[app.id];
-            
+        // 1. 刷新主屏幕网格 (依赖 renderItems)
+        if (typeof renderItems === 'function') {
+            renderItems();
+        }
+
+        // 2. 刷新 Dock 栏
+        const dockItems = document.querySelectorAll('.dock-item');
+        dockItems.forEach(item => {
+            const appId = item.dataset.appId;
+            if (!appId) return;
+
+            const iconContainer = item.querySelector('.app-icon');
+            if (!iconContainer) return;
+
+            const appInfo = knownApps[appId] || { icon: 'fas fa-question', color: '#ccc' };
+            const customIcon = state.icons[appId];
+            const customColor = state.iconColors[appId];
+            const finalColor = customColor || appInfo.color;
+
             // 应用背景色
-            if (iconColor) {
-                el.style.backgroundColor = iconColor;
+            iconContainer.style.backgroundColor = finalColor;
+
+            // 应用图标内容
+            if (customIcon) {
+                iconContainer.innerHTML = `<img src="${customIcon}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--icon-radius);">`;
             } else {
-                // 恢复默认背景色 (通常由CSS控制，这里设为空)
-                el.style.backgroundColor = '';
-            }
-            
-            if (iconData) {
-                el.innerHTML = `<img src="${iconData}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--icon-radius);">`;
-                // 如果有图片，背景色可能被遮挡，但如果图片是透明png，背景色会显示
-            } else {
-                const originalIcons = {
-                    'icon-envelope': 'fas fa-envelope',
-                    'icon-wechat': 'fab fa-weixin',
-                    'icon-world': 'fas fa-globe',
-                    'icon-settings': 'fas fa-cog',
-                    'icon-theme': 'fas fa-paint-brush',
-                    'icon-shopping': 'fas fa-shopping-bag',
-                    'icon-forum': 'fas fa-comments',
-                    'icon-phone': 'fas fa-mobile-alt'
-                };
-                el.innerHTML = `<i class="${originalIcons[app.id]}"></i>`;
+                iconContainer.innerHTML = `<i class="${appInfo.icon}" style="color: ${finalColor === '#ffffff' ? '#000' : '#fff'}"></i>`;
             }
         });
     }
@@ -8508,7 +8513,7 @@ ${itineraryContext}
     }
 });
 /* ============================================================
-   全新的组件库与主屏幕管理系统 (复制到 script.js 底部)
+   全新的组件库与主屏幕管理系统 (完整修复版)
    ============================================================ */
 
 const GRID_ROWS = 6;
@@ -8516,26 +8521,30 @@ const GRID_COLS = 4;
 const TOTAL_SLOTS = GRID_ROWS * GRID_COLS;
 let isEditMode = false;
 
-// --- 1. 定义数据结构 ---
+// --- 1. 定义数据结构 (已修复坐标) ---
 
 // 主屏幕上正在显示的图标/组件
 let homeScreenData = [
-    // 初始只放这几个 App
-    { index: 10, type: 'app', name: '微信', iconClass: 'fab fa-weixin', color: '#07C160', appId: 'wechat-app' },
-    { index: 11, type: 'app', name: '世界书', iconClass: 'fas fa-globe', color: '#007AFF', appId: 'worldbook-app' },
-    { index: 12, type: 'app', name: '设置', iconClass: 'fas fa-cog', color: '#8E8E93', appId: 'settings-app' },
-    { index: 13, type: 'app', name: '美化', iconClass: 'fas fa-paint-brush', color: '#5856D6', appId: 'theme-app' },
-    // 初始把音乐组件放上去
-    { index: 0, type: 'dom-element', elementId: 'music-widget', size: '4x2' }
+    // 音乐组件 (占据前两行: Row 0-1)
+    { index: 0, type: 'dom-element', elementId: 'music-widget', size: '4x2' },
+    
+    // 拍立得组件 (移到第3行第一个，即 Index 8，避免重叠)
+    { index: 8, type: 'dom-element', elementId: 'polaroid-widget', size: '2x2' },
+    
+    // 其他 App (放在第4行: Index 12-15)
+    { index: 12, type: 'app', name: '微信', iconClass: 'fab fa-weixin', color: '#07C160', appId: 'wechat-app' },
+    { index: 13, type: 'app', name: '世界书', iconClass: 'fas fa-globe', color: '#007AFF', appId: 'worldbook-app' },
+    { index: 14, type: 'app', name: '设置', iconClass: 'fas fa-cog', color: '#8E8E93', appId: 'settings-app' },
+    { index: 15, type: 'app', name: '美化', iconClass: 'fas fa-paint-brush', color: '#5856D6', appId: 'theme-app' },
 ];
 
-// 系统内置组件定义
+// 系统内置组件定义 (用于从仓库恢复)
 const systemWidgets = [
     { name: '音乐播放器', type: 'dom-element', elementId: 'music-widget', size: '4x2', previewColor: '#ff2d55' },
     { name: '拍立得', type: 'dom-element', elementId: 'polaroid-widget', size: '2x2', previewColor: '#ff9500' }
 ];
 
-// 用户导入的 JSON 组件库 (内存存储)
+// 用户导入的 JSON 组件库
 let importedWidgets = [];
 
 // DOM 元素引用
@@ -8547,148 +8556,188 @@ const widgetInput = document.getElementById('widget-file-input');
 // --- 2. 初始化与渲染 ---
 
 function initGrid() {
+    // 救援行动：先把系统组件搬回仓库，防止丢失
+    systemWidgets.forEach(sysWidget => {
+        const el = document.getElementById(sysWidget.elementId);
+        if (el && repository && el.parentNode !== repository) {
+            repository.appendChild(el);
+        }
+    });
+
     gridContainer.innerHTML = '';
     for (let i = 0; i < TOTAL_SLOTS; i++) {
         const slot = document.createElement('div');
         slot.classList.add('grid-slot');
         slot.dataset.index = i;
         
-        // 拖拽事件
-        slot.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-        slot.addEventListener('dragenter', () => slot.classList.add('drag-over'));
-        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+        // 绑定拖拽事件
+        slot.addEventListener('dragover', handleDragOver);
+        slot.addEventListener('dragleave', handleDragLeave);
         slot.addEventListener('drop', handleDrop);
         
-        // 双击进入编辑模式
-        slot.addEventListener('dblclick', toggleEditMode);
+        // 双击空白处进入编辑模式
+        slot.addEventListener('dblclick', (e) => {
+            if(e.target === slot) toggleEditMode();
+        });
+        
         gridContainer.appendChild(slot);
     }
+    
+    // 尝试读取存档，然后渲染
+    loadLayout();
     renderItems();
-    renderLibrary(); // 初始化库界面
+    renderLibrary();
 }
 
-/* ==========================================
-   替换 script.js 中的 renderItems 函数
-   ========================================== */
-
 function renderItems() {
-    console.log("开始渲染桌面..."); // 调试信息
-
-    // 1. 【关键步骤】救援行动：先把系统组件搬回仓库安全区
-    // 必须在清空格子之前做，否则 innerHTML='' 会把组件删掉！
+    // 1. 先把所有系统组件搬回仓库 (隐藏起来)
     systemWidgets.forEach(sysWidget => {
         const el = document.getElementById(sysWidget.elementId);
-        // 如果找不到元素，说明 HTML 里可能 ID 写错了或者被删了
-        if (!el) {
-            console.error(`严重错误：找不到 ID 为 ${sysWidget.elementId} 的组件 HTML！`);
-            return;
-        }
-        
-        // 只有当它目前不在仓库里时，才搬回去
-        if (repository && el.parentNode !== repository) {
+        if (el && repository) {
             repository.appendChild(el);
+            el.style.display = 'block'; 
         }
-        // 确保它在仓库里是隐藏的，但在后面搬出来时会变成 block
-        el.style.display = 'block'; 
     });
 
-    // 2. 清空所有格子
+    // 2. 获取所有格子
     const slots = document.querySelectorAll('.grid-slot');
+    
+    // 3. 重置所有格子的状态
     slots.forEach(slot => {
-        slot.innerHTML = ''; // 此时组件都在仓库里，清空格子是安全的
-        slot.className = 'grid-slot';
+        slot.innerHTML = '';
+        slot.className = 'grid-slot'; 
+        slot.style.display = 'block'; // 默认显示
         slot.style.gridColumn = 'auto';
         slot.style.gridRow = 'auto';
+        slot.removeAttribute('style');
     });
 
-    // 编辑模式样式
+    // 4. 应用编辑模式样式
     if (isEditMode) gridContainer.classList.add('edit-mode');
     else gridContainer.classList.remove('edit-mode');
 
-    // 3. 重新把组件搬进格子
+    // 5. 计算被大组件遮挡的格子，需要隐藏
+    let coveredIndices = [];
+    homeScreenData.forEach(item => {
+        if (item.size && item.size !== '1x1') {
+            const occupied = getOccupiedSlots(item.index, item.size);
+            if (occupied) {
+                // 除了起始位置，其他被占用的都要隐藏
+                occupied.forEach(id => {
+                    if (id !== item.index) coveredIndices.push(id);
+                });
+            }
+        }
+    });
+
+    // 6. 隐藏格子 (修复网格错乱的关键)
+    coveredIndices.forEach(id => {
+        if (slots[id]) slots[id].style.display = 'none';
+    });
+
+    // 7. 渲染组件到格子
     homeScreenData.forEach(item => {
         const slot = slots[item.index];
         if (!slot) return;
 
-        // A. 系统 DOM 组件 (音乐/拍立得)
+        // 只有编辑模式下才允许拖拽
+        const canDrag = isEditMode;
+
+        // A. DOM 组件 (音乐/拍立得)
         if (item.type === 'dom-element') {
             const domEl = document.getElementById(item.elementId);
             if (domEl) {
                 applyWidgetSize(slot, item.size);
                 slot.classList.add('widget-slot');
+                slot.appendChild(domEl);
                 
-                // 【关键】从仓库移动到格子
-                slot.appendChild(domEl); 
+                // 设置拖拽
+                domEl.setAttribute('draggable', canDrag);
+                domEl.ondragstart = (e) => handleDragStart(e, item);
                 
-                // 拖拽设置
-                domEl.setAttribute('draggable', true);
-                domEl.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item));
+                // 【修复：移除了禁止鼠标事件的代码，现在可以拖拽了】
                 
                 // 添加删除按钮
-                addDeleteButton(slot, item);
-            } else {
-                console.warn(`数据里有 ${item.elementId}，但 HTML 里找不到它。`);
+                if (isEditMode) addDeleteButton(slot, item);
             }
         }
         
         // B. 普通 App
         else if (item.type === 'app') {
-            const appEl = createAppElement(item);
+            const appEl = createAppElement(item, canDrag);
             slot.appendChild(appEl);
+            if (isEditMode) addDeleteButton(slot, item);
         }
         
         // C. JSON 组件
         else if (item.type === 'custom-json-widget') {
-            const widgetEl = createCustomJsonWidget(item);
+            const widgetEl = createCustomJsonWidget(item, canDrag);
             applyWidgetSize(slot, item.size);
             slot.appendChild(widgetEl);
+            if (isEditMode) addDeleteButton(slot, item);
         }
     });
 }
 
-// 辅助：给格子添加删除按钮 (专门用于 DOM 组件)
-function addDeleteBtnToSlot(slot, item) {
-    const btn = document.createElement('div');
-    btn.className = 'delete-btn';
-    btn.innerHTML = '−'; // 减号
-    btn.onclick = (e) => removeItem(item);
-    slot.appendChild(btn); // 直接加在 slot 里，利用 absolute 定位到左上角
-}
+// --- 3. 辅助创建函数 ---
 
-// --- 3. 创建元素函数 ---
-
-function createAppElement(item) {
+function createAppElement(item, draggable) {
     const div = document.createElement('div');
     div.classList.add('draggable-item');
-    div.draggable = true;
+    div.setAttribute('draggable', draggable);
+    
+    // --- 适配美化功能开始 ---
+    
+    // 1. 确定背景颜色
+    // 先看 state.iconColors 里有没有这个 App 的自定义颜色，如果没有就用默认的
+    let finalColor = item.color || '#fff';
+    // 使用 window.iphoneSimState 访问全局状态
+    if (typeof window.iphoneSimState !== 'undefined' && window.iphoneSimState.iconColors && window.iphoneSimState.iconColors[item.appId]) {
+        finalColor = window.iphoneSimState.iconColors[item.appId];
+    }
+
+    // 2. 确定图标内容 (图标 vs 自定义图片)
+    // 默认是字体图标 (<i>)
+    let iconContent = `<i class="${item.iconClass}" style="color: ${finalColor === '#fff' ? '#000' : '#fff'};"></i>`;
+    
+    // 如果 state.icons 里有这个 App 的自定义图片，就用图片替换 <i>
+    if (typeof window.iphoneSimState !== 'undefined' && window.iphoneSimState.icons && window.iphoneSimState.icons[item.appId]) {
+        iconContent = `<img src="${window.iphoneSimState.icons[item.appId]}" style="width:100%; height:100%; object-fit:cover; border-radius:14px;">`;
+    }
+    // --- 适配美化功能结束 ---
+
     div.innerHTML = `
-        <div class="app-icon-img" style="background-color: ${item.color || '#000'}">
-            <i class="${item.iconClass}" style="color: #fff;"></i>
+        <div class="app-icon-img" style="background-color: ${finalColor}">
+            ${iconContent}
         </div>
         <span class="app-name">${item.name}</span>
     `;
-    // App 也可以删除吗？如果你想也可以加删除按钮，这里暂时不加，只加给 Widget
     
-    div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item)));
-    div.addEventListener('click', () => {
+    div.addEventListener('dragstart', (e) => handleDragStart(e, item));
+    
+    // 点击事件：非编辑模式下打开应用
+    div.addEventListener('click', (e) => {
         if (!isEditMode && item.appId) {
-            const app = document.getElementById(item.appId);
-            if(app) app.classList.remove('hidden');
+            // 调用原有的应用打开逻辑
+            const appScreen = document.getElementById(item.appId);
+            if (appScreen) appScreen.classList.remove('hidden');
         }
     });
+    
     return div;
 }
 
-function createCustomJsonWidget(item) {
+
+function createCustomJsonWidget(item, draggable) {
     const div = document.createElement('div');
     div.classList.add('custom-widget');
-    div.draggable = true;
+    div.setAttribute('draggable', draggable);
     
-    // 内容容器
     const content = document.createElement('div');
     content.style.width = '100%'; content.style.height = '100%'; 
     content.style.borderRadius = '18px'; content.style.overflow = 'hidden';
-    
+    if(isEditMode) content.style.pointerEvents = 'none'; 
+
     if (item.css) {
         const style = document.createElement('style');
         style.textContent = item.css;
@@ -8700,85 +8749,216 @@ function createCustomJsonWidget(item) {
     content.appendChild(htmlDiv);
     div.appendChild(content);
 
-    // 删除按钮
-    const delBtn = document.createElement('div');
-    delBtn.className = 'delete-btn';
-    delBtn.innerHTML = '−';
-    delBtn.onclick = (e) => {
-        e.stopPropagation();
-        removeItem(item);
-    };
-    div.appendChild(delBtn);
-
-    div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item)));
+    div.addEventListener('dragstart', (e) => handleDragStart(e, item));
     return div;
 }
 
-// --- 4. 核心逻辑：删除与添加 ---
+function addDeleteButton(slot, item) {
+    const btn = document.createElement('div');
+    btn.className = 'delete-btn';
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`确定要移除 ${item.name || '这个组件'} 吗？`)) {
+            removeItem(item);
+        }
+    };
+    slot.appendChild(btn);
+}
+
+// --- 4. 核心拖拽逻辑 ---
+
+// 获取组件占用的格子索引数组
+function getOccupiedSlots(startIndex, size) {
+    const indices = [];
+    const r = Math.floor(startIndex / GRID_COLS);
+    const c = startIndex % GRID_COLS;
+    
+    let w = 1, h = 1;
+    if (size === '2x2') { w = 2; h = 2; }
+    if (size === '4x2') { w = 4; h = 2; }
+    
+    if (c + w > GRID_COLS) return null; // 越界
+    if (r + h > GRID_ROWS) return null; // 越界
+
+    for (let i = 0; i < h; i++) {
+        for (let j = 0; j < w; j++) {
+            indices.push((r + i) * GRID_COLS + (c + j));
+        }
+    }
+    return indices;
+}
+
+function handleDragStart(e, item) {
+    e.dataTransfer.setData('text/plain', JSON.stringify(item));
+    e.dataTransfer.effectAllowed = 'move';
+    window.draggingSize = item.size || '1x1';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    // 吸附预览
+    const targetIndex = parseInt(this.dataset.index);
+    const size = window.draggingSize || '1x1';
+    
+    document.querySelectorAll('.grid-slot.drag-preview').forEach(el => el.classList.remove('drag-preview'));
+    
+    const slotsToHighlight = getOccupiedSlots(targetIndex, size);
+    
+    if (slotsToHighlight) {
+        slotsToHighlight.forEach(idx => {
+            const slot = document.querySelector(`.grid-slot[data-index="${idx}"]`);
+            if (slot) slot.classList.add('drag-preview');
+        });
+    }
+}
+
+function handleDragLeave(e) {
+    // 可选：不做处理
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    document.querySelectorAll('.grid-slot.drag-preview').forEach(el => el.classList.remove('drag-preview'));
+    
+    const targetIndex = parseInt(this.dataset.index);
+    try {
+        const rawData = e.dataTransfer.getData('text/plain');
+        if (!rawData) return;
+
+        const data = JSON.parse(rawData);
+        
+        // 检查是否越界
+        const targetSlots = getOccupiedSlots(targetIndex, data.size || '1x1');
+        if (!targetSlots) return;
+
+        // 查找原始对象
+        let oldItem = null;
+        if (data.elementId) {
+            oldItem = homeScreenData.find(d => d.elementId === data.elementId);
+        } else if (data.appId) {
+            oldItem = homeScreenData.find(d => d.appId === data.appId);
+        } else {
+            oldItem = homeScreenData.find(d => d.index === data.index && d.name === data.name);
+        }
+
+        if (oldItem) {
+            // 简单覆盖模式：允许拖到任何不越界的位置
+            // 高级逻辑（交换）比较复杂，这里先确保能拖动
+            oldItem.index = targetIndex;
+            renderItems();
+        }
+    } catch(err) {
+        console.error("Drop error", err);
+    }
+}
+
+// --- 5. 添加与删除 ---
 
 function removeItem(item) {
-    // 从主屏幕数据中移除
     homeScreenData = homeScreenData.filter(d => d !== item);
-    renderItems(); // 重新渲染，DOM组件会自动回到仓库
+    renderItems();
 }
 
 function addToScreen(widgetTemplate) {
-    // 寻找空位
     let freeIndex = -1;
-    // 简单查找，不考虑大小冲突，优化体验的话需要更复杂的网格算法
+    // 寻找空位
     for(let i=0; i<TOTAL_SLOTS; i++) {
-        if(!homeScreenData.find(d => d.index === i)) { 
-            // 如果是 2x2，检查右边边界；如果是 4x2，检查整行
-            // 这里为了简单，先直接放
-            freeIndex = i; 
-            break; 
+        // 检查点 i 是否被占用
+        const isOccupied = homeScreenData.some(d => {
+            const occ = getOccupiedSlots(d.index, d.size || '1x1');
+            return occ && occ.includes(i);
+        });
+        
+        if (!isOccupied) {
+            // 检查放入后是否越界或重叠
+            const needed = getOccupiedSlots(i, widgetTemplate.size);
+            if (needed) {
+                const collision = needed.some(idx => {
+                    return homeScreenData.some(d => {
+                        const occ = getOccupiedSlots(d.index, d.size || '1x1');
+                        return occ && occ.includes(idx);
+                    });
+                });
+                if (!collision) {
+                    freeIndex = i;
+                    break;
+                }
+            }
         }
     }
 
     if(freeIndex === -1) {
-        alert("主屏幕已满！请先进入编辑模式删除一些图标。");
+        alert("主屏幕空间不足，无法放置该组件。");
         return;
     }
 
-    // 检查：如果是系统组件，且已经在屏幕上，则不能重复添加
     if (widgetTemplate.type === 'dom-element') {
         const exists = homeScreenData.find(d => d.elementId === widgetTemplate.elementId);
         if (exists) {
-            alert("这个组件已经在屏幕上了。");
+            alert("该组件已在屏幕上。");
             return;
         }
     }
 
-    // 构造新数据项
-    const newItem = { ...widgetTemplate, index: freeIndex }; // 复制模板并分配 index
+    const newItem = { ...widgetTemplate, index: freeIndex };
     homeScreenData.push(newItem);
-    
-    // 关闭库并刷新
     libraryModal.classList.remove('show');
     renderItems();
 }
 
-// --- 5. 组件库界面逻辑 ---
+// --- 6. 工具栏与保存 ---
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const toolbar = document.getElementById('edit-mode-toolbar');
+    if (isEditMode) {
+        toolbar.classList.remove('hidden');
+    } else {
+        toolbar.classList.add('hidden');
+    }
+    renderItems();
+}
+
+function saveLayout() {
+    try {
+        localStorage.setItem('myIOS_HomeScreen', JSON.stringify(homeScreenData));
+        localStorage.setItem('myIOS_Library', JSON.stringify(importedWidgets));
+        toggleEditMode(); 
+        alert("布局保存成功！");
+    } catch (e) {
+        console.error(e);
+        alert("保存失败：可能是存储空间不足。");
+    }
+}
+
+function loadLayout() {
+    try {
+        const savedScreen = localStorage.getItem('myIOS_HomeScreen');
+        const savedLib = localStorage.getItem('myIOS_Library');
+        if (savedScreen) homeScreenData = JSON.parse(savedScreen);
+        if (savedLib) importedWidgets = JSON.parse(savedLib);
+    } catch (e) { console.error("Load failed", e); }
+}
+
+// --- 7. 组件库界面 ---
 
 function renderLibrary() {
     const sysRow = document.getElementById('lib-system-row');
     const custRow = document.getElementById('lib-custom-row');
     
-    // 渲染系统组件
     sysRow.innerHTML = '';
     systemWidgets.forEach(widget => {
-        const item = createLibraryItem(widget);
-        sysRow.appendChild(item);
+        sysRow.appendChild(createLibraryItem(widget));
     });
 
-    // 渲染导入组件
     custRow.innerHTML = '';
     if (importedWidgets.length === 0) {
         custRow.innerHTML = '<div style="color:#888; padding:10px;">暂无导入</div>';
     } else {
         importedWidgets.forEach(widget => {
-            const item = createLibraryItem(widget);
-            custRow.appendChild(item);
+            custRow.appendChild(createLibraryItem(widget));
         });
     }
 }
@@ -8787,12 +8967,10 @@ function createLibraryItem(widget) {
     const el = document.createElement('div');
     el.className = 'library-item';
     
-    // 预览图 (简单模拟)
     let previewHtml = '';
     if (widget.type === 'dom-element') {
         previewHtml = `<div style="width:100%; height:100%; background:${widget.previewColor || '#ccc'}; display:flex; align-items:center; justify-content:center; color:white; font-size:24px;"><i class="fas fa-cube"></i></div>`;
     } else {
-        // 对于 JSON 组件，尝试渲染一下 HTML 作为预览（缩放）
         previewHtml = `<div style="transform:scale(0.5); transform-origin:top left; width:200%; height:200%;">${widget.html}</div>`;
         if(widget.css) previewHtml = `<style>${widget.css}</style>` + previewHtml;
     }
@@ -8803,28 +8981,25 @@ function createLibraryItem(widget) {
         </div>
         <div class="library-item-name">${widget.name}</div>
     `;
-    
     el.onclick = () => addToScreen(widget);
     return el;
 }
 
-// --- 6. 事件绑定与文件导入 ---
+function applyWidgetSize(slot, size) {
+    if (size === '4x2') { slot.style.gridColumn = 'span 4'; slot.style.gridRow = 'span 2'; }
+    else if (size === '2x2') { slot.style.gridColumn = 'span 2'; slot.style.gridRow = 'span 2'; }
+}
 
-// 打开/关闭组件库
-// 修改原来的 add-widget-btn 逻辑，改为打开库
+// 事件绑定
 document.getElementById('add-widget-btn').onclick = () => {
     libraryModal.classList.add('show');
-    renderLibrary(); // 每次打开刷新一下状态
+    renderLibrary();
 };
-
-document.getElementById('close-library-btn').onclick = () => {
-    libraryModal.classList.remove('show');
-};
-
-// 库内的导入按钮
+document.getElementById('close-library-btn').onclick = () => libraryModal.classList.remove('show');
+document.getElementById('exit-edit-btn').onclick = toggleEditMode;
+document.getElementById('save-layout-btn').onclick = saveLayout;
 document.getElementById('import-json-btn').onclick = () => widgetInput.click();
 
-// 文件读取
 widgetInput.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -8833,7 +9008,6 @@ widgetInput.onchange = (e) => {
         try {
             const data = JSON.parse(evt.target.result);
             if(data.html && data.size) {
-                // 保存到库里
                 importedWidgets.push({
                     name: data.name || '未命名组件',
                     type: 'custom-json-widget',
@@ -8841,129 +9015,40 @@ widgetInput.onchange = (e) => {
                     html: data.html,
                     css: data.css
                 });
-                renderLibrary(); // 刷新库界面显示新导入的
-                alert("已导入到组件库！点击下方列表即可添加到桌面。");
+                renderLibrary();
+                alert("导入成功！");
             } else {
-                alert("文件格式不对");
+                alert("文件格式不正确");
             }
-        } catch(err) { console.error(err); alert("解析失败"); }
+        } catch(err) { alert("解析失败"); }
     };
     reader.readAsText(file);
     widgetInput.value = '';
 };
 
-function toggleEditMode() {
-    isEditMode = !isEditMode;
-    const toolbar = document.getElementById('edit-mode-toolbar');
-    if (isEditMode) {
-        toolbar.classList.remove('hidden');
-        gridContainer.classList.add('edit-mode');
-    } else {
-        toolbar.classList.add('hidden');
-        gridContainer.classList.remove('edit-mode');
-    }
-    renderItems(); // 重新渲染以显示/隐藏删除按钮
-}
-document.getElementById('exit-edit-btn').onclick = toggleEditMode;
-
-// 通用函数
-function applyWidgetSize(slot, size) {
-    if (size === '4x2') { slot.style.gridColumn = 'span 4'; slot.style.gridRow = 'span 2'; }
-    else if (size === '2x2') { slot.style.gridColumn = 'span 2'; slot.style.gridRow = 'span 2'; }
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    const targetIndex = parseInt(this.dataset.index);
-    try {
-        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-        // 查找原始数据
-        const oldItem = homeScreenData.find(d => 
-            (d.index === data.index) && 
-            (d.elementId === data.elementId || d.html === data.html)
-        );
-        if (oldItem) {
-            // 简单交换逻辑
-            const targetItem = homeScreenData.find(d => d.index === targetIndex);
-            if (targetItem) { targetItem.index = oldItem.index; }
-            oldItem.index = targetIndex;
-            renderItems();
-        }
-    } catch(err) {}
-}
-
 // 启动
-if (document.readyState === 'loading'){ document.addEventListener(
-    'DOMContentLoaded', initGrid);
-} else {initGrid();
-}
-/* ============================================================
-   新增：数据持久化存储 (LocalStorage)
-   请把这段代码加到 script.js 的最下面
-   ============================================================ */
-
-// 1. 保存功能：把当前屏幕数据和组件库保存到浏览器
-function saveLayout() {
-    try {
-        // 保存主屏幕布局
-        localStorage.setItem('myIOS_HomeScreen', JSON.stringify(homeScreenData));
-        
-        // 保存导入的组件库
-        localStorage.setItem('myIOS_Library', JSON.stringify(importedWidgets));
-        
-        alert("布局已保存！刷新页面也不会丢失了。");
-        toggleEditMode(); // 保存后自动退出编辑模式
-    } catch (e) {
-        console.error(e);
-        alert("保存失败，可能是存储空间不足。");
-    }
-}
-
-// 2. 读取功能：从浏览器加载数据
-function loadLayout() {
-    try {
-        const savedScreen = localStorage.getItem('myIOS_HomeScreen');
-        const savedLib = localStorage.getItem('myIOS_Library');
-
-        if (savedScreen) {
-            console.log("检测到已保存的布局，正在加载...");
-            homeScreenData = JSON.parse(savedScreen);
-        }
-
-        if (savedLib) {
-            console.log("检测到已导入的组件库，正在加载...");
-            importedWidgets = JSON.parse(savedLib);
-        }
-    } catch (e) {
-        console.error("读取存档失败，将使用默认布局", e);
-    }
-}
-
-// 3. 绑定保存按钮事件
-const saveBtn = document.getElementById('save-layout-btn');
-if (saveBtn) {
-    saveBtn.onclick = saveLayout;
-}
-
-// ============================================================
-// 修改：启动逻辑 (替换掉原来的启动代码)
-// ============================================================
-
-// 原来的启动代码通常是直接调用 initGrid()
-// 我们要把它改成：先 Load -> 再 Init
-
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startApp);
+    document.addEventListener('DOMContentLoaded', initGrid);
 } else {
-    startApp();
-}
-
-function startApp() {
-    // 1. 先尝试读取存档
-    loadLayout();
-    
-    // 2. 再初始化网格
     initGrid();
-    
-    // 3. 额外：如果在读取存档后，有些 DOM 组件位置不对，renderItems 会自动修正
 }
+// --- 自动刷新适配 ---
+// 当点击“关闭美化”或“关闭图标设置”按钮时，重新渲染网格以应用新样式
+const refreshButtons = [
+    'close-theme-app', 
+    'close-theme-icons', 
+    'close-theme-wallpaper', // 壁纸改变可能也需要刷新一下视觉
+    'reset-icons' // 重置按钮
+];
+
+refreshButtons.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+        btn.addEventListener('click', () => {
+            // 稍微延迟一下，确保 state 已经更新
+            setTimeout(() => {
+                renderItems(); 
+            }, 50);
+        });
+    }
+});

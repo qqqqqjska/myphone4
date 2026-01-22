@@ -3669,211 +3669,167 @@ input.msg-select-checkbox {
 }
 
 /* --- 适配旧组件到网格中 --- */
+/* ============================================================
+   全新的主屏幕网格与组件系统 (请替换 style.css 底部所有旧代码)
+   ============================================================ */
 
-/* 这是一个存放原生组件的隐藏仓库 */
+/* --- 1. 隐藏的原生组件仓库 --- */
 #widget-repository {
     display: none !important;
 }
 
-/* 强制让音乐组件和拍立得填满格子 */
-.music-widget, .polaroid-widget {
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-    transform: scale(1); /* 防止原有的缩放影响 */
-}
-
-/* 针对音乐组件的微调，让它在格子里更好看 */
-.music-widget {
-    border-radius: 20px;
-    /* 如果原来的样式有固定宽度，这里要覆盖掉 */
-    max-width: none !important; 
-}
-
-/* 针对拍立得的微调 */
-.polaroid-widget {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-/* --- 在 style.css 或 <style> 标签中添加 --- */
-
-/* 新的主屏幕容器 */
+/* --- 2. 主屏幕网格容器 --- */
 .home-screen-grid {
     display: grid;
     /* 4列，每列等宽 */
     grid-template-columns: repeat(4, 1fr);
-    /* 6行，每行等高 (根据屏幕高度大概计算，这里设为固定高度或自适应) */
+    /* 6行，每行高度固定80px，间距自适应 */
     grid-template-rows: repeat(6, 80px); 
     gap: 15px 10px; /* 行间距15px，列间距10px */
-    padding: 20px;
+    padding: 20px 20px 80px 20px; /* 底部留白给 Dock */
     width: 100%;
-    height: 100%;
     box-sizing: border-box;
     position: relative;
+    align-content: start; /* 内容靠上对齐 */
 }
 
-/* 每一个单独的格子 (Slot) */
+/* --- 3. 格子 (Slot) 样式 --- */
 .grid-slot {
     position: relative;
-    border-radius: 15px;
-    /* 打开下面这行注释可以看到格子的边界，方便调试 */
-    /* border: 1px dashed rgba(255,255,255,0.2); */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    border-radius: 18px;
     transition: all 0.2s;
+    /* 默认是透明的 */
 }
 
-/* 格子被拖拽经过时的高亮 */
-.grid-slot.drag-over {
-    background-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+/* 编辑模式下：显示虚线框，提示用户哪里是格子 */
+.edit-mode .grid-slot {
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px dashed rgba(0, 0, 0, 0.15);
 }
 
-/* 放在格子里的 App 图标 */
+/* 拖拽吸附预览：当拖拽经过时变成蓝色高亮 */
+.grid-slot.drag-preview {
+    background-color: rgba(0, 122, 255, 0.2) !important;
+    border: 2px solid #007AFF !important;
+    box-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+    z-index: 5; /* 确保高亮显示在最上层 */
+    border-radius: 18px;
+}
+
+/* --- 4. 格子里的内容 (App图标 & 组件) --- */
+
+/* App 图标容器 */
 .draggable-item {
     width: 60px;
-    height: 60px; /* 图标大小 */
+    height: 80px; 
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    cursor: grab;
+    position: relative;
+    margin: auto;
     z-index: 10;
 }
 
-.draggable-item:active {
-    cursor: grabbing;
-}
-
 .app-icon-img {
-    width: 100%;
-    height: 100%;
-    border-radius: 12px;
-    background-color: #fff; /* 默认白色背景 */
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    background-color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    font-size: 28px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 
 .app-name {
     font-size: 12px;
-    color: #fff;
+    color: #333; /* 深色文字更清晰 */
     margin-top: 5px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    font-weight: 500;
     pointer-events: none; /* 防止文字干扰拖拽 */
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
 }
 
-/* 自定义小组件样式 */
+/* 自定义 JSON 组件容器 */
 .custom-widget {
     width: 100%;
     height: 100%;
     border-radius: 18px;
     overflow: hidden;
     position: relative;
-    cursor: grab;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.custom-widget img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* 删除按钮 (用于长按模式，这里简化为一直显示或点击触发) */
-.delete-btn {
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    width: 20px;
-    height: 20px;
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    border-radius: 50%;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 20;
-}
-
-/* 编辑模式工具栏 */
-#edit-mode-toolbar {
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(20,20,20,0.9);
-    padding: 10px 20px;
-    border-radius: 30px;
-    display: flex;
-    gap: 15px;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-}
-/* 强制给主屏幕一个高度，防止它是空的 */
-.home-screen-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(6, 80px); /* 确保行高 */
-    gap: 15px 10px;
-    padding: 10px 20px;
-    width: 100%;
-    min-height: 500px; /* 强制给个高度 */
-    box-sizing: border-box;
-}
-
-/* 确保仓库里的东西被正确隐藏 */
-#widget-repository {
-    display: none !important;
-}
-
-/* 确保拖拽过来的组件能显示出来 */
+/* 强制修复：让原生组件（音乐/拍立得）在格子里填满并显示 */
 .widget-slot .music-widget,
 .widget-slot .polaroid-widget {
-    display: flex !important; /* 强制显示 */
+    margin: 0 !important;
     width: 100% !important;
     height: 100% !important;
     transform: scale(1) !important;
+    max-width: none !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    display: flex !important;
+    box-shadow: none !important; /* 避免双重阴影 */
 }
 
-/* 格子样式 */
-.grid-slot {
-    position: relative;
-    /* border: 1px dashed #333; */ /* 调试用：如果还看不见，把这行注释取消掉看看格子在哪 */
+/* --- 5. 编辑模式动画 (抖动) --- */
+@keyframes shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(1.5deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-1.5deg); }
+    100% { transform: rotate(0deg); }
 }
-/* --- 1. 删除按钮样式 (仿 iOS 抖动模式的减号) --- */
+
+.edit-mode .draggable-item, 
+.edit-mode .custom-widget,
+.edit-mode .music-widget,
+.edit-mode .polaroid-widget {
+    cursor: grab;
+    animation: shake 0.25s infinite linear; /* 抖动动画 */
+}
+
+.edit-mode .draggable-item:active,
+.edit-mode .custom-widget:active {
+    cursor: grabbing;
+}
+
+/* --- 6. 删除按钮 (仿 iOS 减号) --- */
 .delete-btn {
     position: absolute;
     top: -8px;
     left: -8px;
     width: 24px;
     height: 24px;
-    background: rgba(255, 59, 48, 0.9); /* iOS 红色 */
-    color: white;
+    background: rgba(180, 180, 180, 0.95); /* 浅灰色背景 */
+    color: white; 
     border-radius: 50%;
-    text-align: center;
-    line-height: 22px;
-    font-size: 18px;
-    font-weight: bold;
+    display: none; /* 默认隐藏 */
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     z-index: 100;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    display: none; /* 默认隐藏 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-size: 18px;
+    line-height: 1;
+    font-family: sans-serif;
 }
 
-/* 只有在编辑模式下才显示删除按钮 */
+/* 减号图标 */
+.delete-btn::before {
+    content: "−"; 
+    font-weight: bold;
+    margin-top: -2px;
+}
+
+/* 仅在编辑模式下显示删除按钮，并带有弹出动画 */
 .edit-mode .delete-btn {
-    display: block;
+    display: flex;
     animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -3882,28 +3838,44 @@ input.msg-select-checkbox {
     to { transform: scale(1); }
 }
 
-/* --- 2. 小组件库弹窗样式 --- */
+/* --- 7. 编辑模式底部工具栏 --- */
+#edit-mode-toolbar {
+    position: absolute;
+    bottom: 110px; /* 在 Dock 上方 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: flex;
+    gap: 15px;
+    z-index: 200;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+}
+
+/* --- 8. 小组件库弹窗样式 --- */
 .widget-library-modal {
     position: fixed;
-    bottom: -100%; /* 默认藏在底部 */
+    bottom: -100%; /* 默认隐藏在屏幕下方 */
     left: 0;
     width: 100%;
-    height: 80vh; /* 占屏幕 80% 高度 */
+    height: 80vh; /* 占屏幕高度 80% */
     background: #f2f2f7;
     border-radius: 20px 20px 0 0;
     z-index: 999;
-    transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* 平滑滑出 */
     display: flex;
     flex-direction: column;
-    box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 -5px 30px rgba(0,0,0,0.2);
 }
 
 .widget-library-modal.show {
-    bottom: 0;
+    bottom: 0; /* 显示 */
 }
 
 .library-header {
-    padding: 15px;
+    padding: 15px 20px;
     background: white;
     border-radius: 20px 20px 0 0;
     display: flex;
@@ -3918,32 +3890,33 @@ input.msg-select-checkbox {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px;
 }
 
-/* 库里的分组标题 */
 .library-section-title {
     font-size: 20px;
     font-weight: bold;
     color: #000;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
-/* 库里的组件列表 (横向滚动) */
 .library-scroll-row {
     display: flex;
     gap: 15px;
     overflow-x: auto;
     padding-bottom: 10px;
+    /* 隐藏滚动条 */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.library-scroll-row::-webkit-scrollbar { 
+    display: none; 
 }
 
-/* 库里的组件卡片预览 */
+/* 库里的组件预览卡片 */
 .library-item {
-    flex: 0 0 auto; /* 不压缩 */
-    background: white;
-    border-radius: 18px;
-    padding: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    flex: 0 0 auto;
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3956,15 +3929,16 @@ input.msg-select-checkbox {
 }
 
 .library-preview-box {
-    background: #eee;
-    border-radius: 14px;
-    margin-bottom: 10px;
+    background: #fff;
+    border-radius: 18px;
+    margin-bottom: 8px;
     overflow: hidden;
     position: relative;
-    pointer-events: none; /* 让点击穿透到父元素 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    pointer-events: none; /* 让点击穿透 */
 }
 
-/* 不同尺寸的预览框 */
+/* 预览框尺寸 */
 .size-2x2 { width: 140px; height: 140px; }
 .size-4x2 { width: 290px; height: 140px; }
 
