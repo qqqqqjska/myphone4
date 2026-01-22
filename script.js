@@ -5599,7 +5599,6 @@ ${itineraryContext}
 4. 信息可以是用户的任何方面：喜好、厌恶、习惯、特征、经历、能力等
 5. 必须严格检查是否已在身份描述中存在
 
-- 请在回复的最开始，先进行思考，分析用户意图和你的回复策略，将思考内容包裹在 <thinking> 和 </thinking> 标签中。
 - 如果需要输出角色的内心独白（心声），请在回复的最后（所有指令之后），另起一行输出：THOUGHT: 内容。
 
 注意：
@@ -5609,8 +5608,7 @@ ${itineraryContext}
 4. 发送图片时，请提供详细的画面描述。
 5. 一次回复中最多只能发起一笔转账。
 6. 你有权限更改自己的资料卡信息（网名、微信号、签名），当用户要求或你自己想改时可以使用。
-7. **必须进行思考**：在回复的最开始输出 <thinking>...</thinking>，这部分内容用户不可见，仅用于你的推理。
-8. **THOUGHT: 内容** 是角色的心理活动，用户可见（如果开启了显示）。
+7. **THOUGHT: 内容** 是角色的心理活动，用户可见（如果开启了显示）。
 
 请回复对方的消息。保持简短，像微信聊天一样。
 请务必生成 3 到 7 条回复（必须用 '|||' 分隔每条回复），模拟微信连续发送短消息的习惯。确保这几条消息是连续的对话流，不要重复表达相同的意思。
@@ -5746,8 +5744,10 @@ ${itineraryContext}
             const data = await response.json();
             let replyContent = data.choices[0].message.content;
 
-            // 移除思维链 <thinking>...</thinking>
-            replyContent = replyContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+            // 移除思维链 <thinking>...</thinking> 和 <think>...</think>
+            replyContent = replyContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+                                       .replace(/<think>[\s\S]*?<\/think>/g, '')
+                                       .trim();
 
             // 预处理：先按 ||| 分割
             const rawSegments = replyContent.split('|||');

@@ -1763,7 +1763,7 @@
     
     <!-- 音乐设置弹窗 -->
     <div id="music-settings-modal" class="modal hidden">
-        <div class="modal-content" style="height: 85vh;">
+        <div class="modal-content" style="height: 85vh; padding-bottom: 0;">
             <div class="modal-header">
                 <h3>音乐设置</h3>
                 <button class="close-btn" id="close-music-settings">&times;</button>
@@ -1806,7 +1806,7 @@
                     </div>
 
                     <!-- 歌曲列表页 -->
-                    <div id="music-view-list" class="music-tab-content active" style="flex: 1; overflow-y: auto; padding: 0 16px 20px;">
+                    <div id="music-view-list" class="music-tab-content active" style="flex: 1; overflow-y: auto; padding: 0 16px calc(20px + env(safe-area-inset-bottom));">
                         <div class="ios-list-group" id="music-playlist">
                             <!-- 歌曲列表项 -->
                         </div>
@@ -1814,7 +1814,7 @@
                     </div>
 
                     <!-- 上传歌曲页 -->
-                    <div id="music-view-upload" class="music-tab-content" style="flex: 1; overflow-y: auto; padding: 0 16px 20px; display: none;">
+                    <div id="music-view-upload" class="music-tab-content" style="flex: 1; overflow-y: auto; padding: 0 16px calc(20px + env(safe-area-inset-bottom)); display: none;">
                         <div class="ios-list-group">
                             <div class="list-item">
                                 <div class="list-content column">
