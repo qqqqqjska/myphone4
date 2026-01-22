@@ -8507,3 +8507,463 @@ ${itineraryContext}
         document.getElementById('group-select-modal').classList.add('hidden');
     }
 });
+/* ============================================================
+   全新的组件库与主屏幕管理系统 (复制到 script.js 底部)
+   ============================================================ */
+
+const GRID_ROWS = 6;
+const GRID_COLS = 4;
+const TOTAL_SLOTS = GRID_ROWS * GRID_COLS;
+let isEditMode = false;
+
+// --- 1. 定义数据结构 ---
+
+// 主屏幕上正在显示的图标/组件
+let homeScreenData = [
+    // 初始只放这几个 App
+    { index: 10, type: 'app', name: '微信', iconClass: 'fab fa-weixin', color: '#07C160', appId: 'wechat-app' },
+    { index: 11, type: 'app', name: '世界书', iconClass: 'fas fa-globe', color: '#007AFF', appId: 'worldbook-app' },
+    { index: 12, type: 'app', name: '设置', iconClass: 'fas fa-cog', color: '#8E8E93', appId: 'settings-app' },
+    { index: 13, type: 'app', name: '美化', iconClass: 'fas fa-paint-brush', color: '#5856D6', appId: 'theme-app' },
+    // 初始把音乐组件放上去
+    { index: 0, type: 'dom-element', elementId: 'music-widget', size: '4x2' }
+];
+
+// 系统内置组件定义
+const systemWidgets = [
+    { name: '音乐播放器', type: 'dom-element', elementId: 'music-widget', size: '4x2', previewColor: '#ff2d55' },
+    { name: '拍立得', type: 'dom-element', elementId: 'polaroid-widget', size: '2x2', previewColor: '#ff9500' }
+];
+
+// 用户导入的 JSON 组件库 (内存存储)
+let importedWidgets = [];
+
+// DOM 元素引用
+const gridContainer = document.getElementById('home-screen-grid');
+const repository = document.getElementById('widget-repository');
+const libraryModal = document.getElementById('widget-library-modal');
+const widgetInput = document.getElementById('widget-file-input');
+
+// --- 2. 初始化与渲染 ---
+
+function initGrid() {
+    gridContainer.innerHTML = '';
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+        const slot = document.createElement('div');
+        slot.classList.add('grid-slot');
+        slot.dataset.index = i;
+        
+        // 拖拽事件
+        slot.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+        slot.addEventListener('dragenter', () => slot.classList.add('drag-over'));
+        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+        slot.addEventListener('drop', handleDrop);
+        
+        // 双击进入编辑模式
+        slot.addEventListener('dblclick', toggleEditMode);
+        gridContainer.appendChild(slot);
+    }
+    renderItems();
+    renderLibrary(); // 初始化库界面
+}
+
+/* ==========================================
+   替换 script.js 中的 renderItems 函数
+   ========================================== */
+
+function renderItems() {
+    console.log("开始渲染桌面..."); // 调试信息
+
+    // 1. 【关键步骤】救援行动：先把系统组件搬回仓库安全区
+    // 必须在清空格子之前做，否则 innerHTML='' 会把组件删掉！
+    systemWidgets.forEach(sysWidget => {
+        const el = document.getElementById(sysWidget.elementId);
+        // 如果找不到元素，说明 HTML 里可能 ID 写错了或者被删了
+        if (!el) {
+            console.error(`严重错误：找不到 ID 为 ${sysWidget.elementId} 的组件 HTML！`);
+            return;
+        }
+        
+        // 只有当它目前不在仓库里时，才搬回去
+        if (repository && el.parentNode !== repository) {
+            repository.appendChild(el);
+        }
+        // 确保它在仓库里是隐藏的，但在后面搬出来时会变成 block
+        el.style.display = 'block'; 
+    });
+
+    // 2. 清空所有格子
+    const slots = document.querySelectorAll('.grid-slot');
+    slots.forEach(slot => {
+        slot.innerHTML = ''; // 此时组件都在仓库里，清空格子是安全的
+        slot.className = 'grid-slot';
+        slot.style.gridColumn = 'auto';
+        slot.style.gridRow = 'auto';
+    });
+
+    // 编辑模式样式
+    if (isEditMode) gridContainer.classList.add('edit-mode');
+    else gridContainer.classList.remove('edit-mode');
+
+    // 3. 重新把组件搬进格子
+    homeScreenData.forEach(item => {
+        const slot = slots[item.index];
+        if (!slot) return;
+
+        // A. 系统 DOM 组件 (音乐/拍立得)
+        if (item.type === 'dom-element') {
+            const domEl = document.getElementById(item.elementId);
+            if (domEl) {
+                applyWidgetSize(slot, item.size);
+                slot.classList.add('widget-slot');
+                
+                // 【关键】从仓库移动到格子
+                slot.appendChild(domEl); 
+                
+                // 拖拽设置
+                domEl.setAttribute('draggable', true);
+                domEl.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item));
+                
+                // 添加删除按钮
+                addDeleteButton(slot, item);
+            } else {
+                console.warn(`数据里有 ${item.elementId}，但 HTML 里找不到它。`);
+            }
+        }
+        
+        // B. 普通 App
+        else if (item.type === 'app') {
+            const appEl = createAppElement(item);
+            slot.appendChild(appEl);
+        }
+        
+        // C. JSON 组件
+        else if (item.type === 'custom-json-widget') {
+            const widgetEl = createCustomJsonWidget(item);
+            applyWidgetSize(slot, item.size);
+            slot.appendChild(widgetEl);
+        }
+    });
+}
+
+// 辅助：给格子添加删除按钮 (专门用于 DOM 组件)
+function addDeleteBtnToSlot(slot, item) {
+    const btn = document.createElement('div');
+    btn.className = 'delete-btn';
+    btn.innerHTML = '−'; // 减号
+    btn.onclick = (e) => removeItem(item);
+    slot.appendChild(btn); // 直接加在 slot 里，利用 absolute 定位到左上角
+}
+
+// --- 3. 创建元素函数 ---
+
+function createAppElement(item) {
+    const div = document.createElement('div');
+    div.classList.add('draggable-item');
+    div.draggable = true;
+    div.innerHTML = `
+        <div class="app-icon-img" style="background-color: ${item.color || '#000'}">
+            <i class="${item.iconClass}" style="color: #fff;"></i>
+        </div>
+        <span class="app-name">${item.name}</span>
+    `;
+    // App 也可以删除吗？如果你想也可以加删除按钮，这里暂时不加，只加给 Widget
+    
+    div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item)));
+    div.addEventListener('click', () => {
+        if (!isEditMode && item.appId) {
+            const app = document.getElementById(item.appId);
+            if(app) app.classList.remove('hidden');
+        }
+    });
+    return div;
+}
+
+function createCustomJsonWidget(item) {
+    const div = document.createElement('div');
+    div.classList.add('custom-widget');
+    div.draggable = true;
+    
+    // 内容容器
+    const content = document.createElement('div');
+    content.style.width = '100%'; content.style.height = '100%'; 
+    content.style.borderRadius = '18px'; content.style.overflow = 'hidden';
+    
+    if (item.css) {
+        const style = document.createElement('style');
+        style.textContent = item.css;
+        content.appendChild(style);
+    }
+    const htmlDiv = document.createElement('div');
+    htmlDiv.innerHTML = item.html;
+    htmlDiv.style.height = '100%';
+    content.appendChild(htmlDiv);
+    div.appendChild(content);
+
+    // 删除按钮
+    const delBtn = document.createElement('div');
+    delBtn.className = 'delete-btn';
+    delBtn.innerHTML = '−';
+    delBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeItem(item);
+    };
+    div.appendChild(delBtn);
+
+    div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', JSON.stringify(item)));
+    return div;
+}
+
+// --- 4. 核心逻辑：删除与添加 ---
+
+function removeItem(item) {
+    // 从主屏幕数据中移除
+    homeScreenData = homeScreenData.filter(d => d !== item);
+    renderItems(); // 重新渲染，DOM组件会自动回到仓库
+}
+
+function addToScreen(widgetTemplate) {
+    // 寻找空位
+    let freeIndex = -1;
+    // 简单查找，不考虑大小冲突，优化体验的话需要更复杂的网格算法
+    for(let i=0; i<TOTAL_SLOTS; i++) {
+        if(!homeScreenData.find(d => d.index === i)) { 
+            // 如果是 2x2，检查右边边界；如果是 4x2，检查整行
+            // 这里为了简单，先直接放
+            freeIndex = i; 
+            break; 
+        }
+    }
+
+    if(freeIndex === -1) {
+        alert("主屏幕已满！请先进入编辑模式删除一些图标。");
+        return;
+    }
+
+    // 检查：如果是系统组件，且已经在屏幕上，则不能重复添加
+    if (widgetTemplate.type === 'dom-element') {
+        const exists = homeScreenData.find(d => d.elementId === widgetTemplate.elementId);
+        if (exists) {
+            alert("这个组件已经在屏幕上了。");
+            return;
+        }
+    }
+
+    // 构造新数据项
+    const newItem = { ...widgetTemplate, index: freeIndex }; // 复制模板并分配 index
+    homeScreenData.push(newItem);
+    
+    // 关闭库并刷新
+    libraryModal.classList.remove('show');
+    renderItems();
+}
+
+// --- 5. 组件库界面逻辑 ---
+
+function renderLibrary() {
+    const sysRow = document.getElementById('lib-system-row');
+    const custRow = document.getElementById('lib-custom-row');
+    
+    // 渲染系统组件
+    sysRow.innerHTML = '';
+    systemWidgets.forEach(widget => {
+        const item = createLibraryItem(widget);
+        sysRow.appendChild(item);
+    });
+
+    // 渲染导入组件
+    custRow.innerHTML = '';
+    if (importedWidgets.length === 0) {
+        custRow.innerHTML = '<div style="color:#888; padding:10px;">暂无导入</div>';
+    } else {
+        importedWidgets.forEach(widget => {
+            const item = createLibraryItem(widget);
+            custRow.appendChild(item);
+        });
+    }
+}
+
+function createLibraryItem(widget) {
+    const el = document.createElement('div');
+    el.className = 'library-item';
+    
+    // 预览图 (简单模拟)
+    let previewHtml = '';
+    if (widget.type === 'dom-element') {
+        previewHtml = `<div style="width:100%; height:100%; background:${widget.previewColor || '#ccc'}; display:flex; align-items:center; justify-content:center; color:white; font-size:24px;"><i class="fas fa-cube"></i></div>`;
+    } else {
+        // 对于 JSON 组件，尝试渲染一下 HTML 作为预览（缩放）
+        previewHtml = `<div style="transform:scale(0.5); transform-origin:top left; width:200%; height:200%;">${widget.html}</div>`;
+        if(widget.css) previewHtml = `<style>${widget.css}</style>` + previewHtml;
+    }
+
+    el.innerHTML = `
+        <div class="library-preview-box size-${widget.size}">
+            <div style="width:100%; height:100%; overflow:hidden;">${previewHtml}</div>
+        </div>
+        <div class="library-item-name">${widget.name}</div>
+    `;
+    
+    el.onclick = () => addToScreen(widget);
+    return el;
+}
+
+// --- 6. 事件绑定与文件导入 ---
+
+// 打开/关闭组件库
+// 修改原来的 add-widget-btn 逻辑，改为打开库
+document.getElementById('add-widget-btn').onclick = () => {
+    libraryModal.classList.add('show');
+    renderLibrary(); // 每次打开刷新一下状态
+};
+
+document.getElementById('close-library-btn').onclick = () => {
+    libraryModal.classList.remove('show');
+};
+
+// 库内的导入按钮
+document.getElementById('import-json-btn').onclick = () => widgetInput.click();
+
+// 文件读取
+widgetInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        try {
+            const data = JSON.parse(evt.target.result);
+            if(data.html && data.size) {
+                // 保存到库里
+                importedWidgets.push({
+                    name: data.name || '未命名组件',
+                    type: 'custom-json-widget',
+                    size: data.size,
+                    html: data.html,
+                    css: data.css
+                });
+                renderLibrary(); // 刷新库界面显示新导入的
+                alert("已导入到组件库！点击下方列表即可添加到桌面。");
+            } else {
+                alert("文件格式不对");
+            }
+        } catch(err) { console.error(err); alert("解析失败"); }
+    };
+    reader.readAsText(file);
+    widgetInput.value = '';
+};
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const toolbar = document.getElementById('edit-mode-toolbar');
+    if (isEditMode) {
+        toolbar.classList.remove('hidden');
+        gridContainer.classList.add('edit-mode');
+    } else {
+        toolbar.classList.add('hidden');
+        gridContainer.classList.remove('edit-mode');
+    }
+    renderItems(); // 重新渲染以显示/隐藏删除按钮
+}
+document.getElementById('exit-edit-btn').onclick = toggleEditMode;
+
+// 通用函数
+function applyWidgetSize(slot, size) {
+    if (size === '4x2') { slot.style.gridColumn = 'span 4'; slot.style.gridRow = 'span 2'; }
+    else if (size === '2x2') { slot.style.gridColumn = 'span 2'; slot.style.gridRow = 'span 2'; }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const targetIndex = parseInt(this.dataset.index);
+    try {
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        // 查找原始数据
+        const oldItem = homeScreenData.find(d => 
+            (d.index === data.index) && 
+            (d.elementId === data.elementId || d.html === data.html)
+        );
+        if (oldItem) {
+            // 简单交换逻辑
+            const targetItem = homeScreenData.find(d => d.index === targetIndex);
+            if (targetItem) { targetItem.index = oldItem.index; }
+            oldItem.index = targetIndex;
+            renderItems();
+        }
+    } catch(err) {}
+}
+
+// 启动
+if (document.readyState === 'loading'){ document.addEventListener(
+    'DOMContentLoaded', initGrid);
+} else {initGrid();
+}
+/* ============================================================
+   新增：数据持久化存储 (LocalStorage)
+   请把这段代码加到 script.js 的最下面
+   ============================================================ */
+
+// 1. 保存功能：把当前屏幕数据和组件库保存到浏览器
+function saveLayout() {
+    try {
+        // 保存主屏幕布局
+        localStorage.setItem('myIOS_HomeScreen', JSON.stringify(homeScreenData));
+        
+        // 保存导入的组件库
+        localStorage.setItem('myIOS_Library', JSON.stringify(importedWidgets));
+        
+        alert("布局已保存！刷新页面也不会丢失了。");
+        toggleEditMode(); // 保存后自动退出编辑模式
+    } catch (e) {
+        console.error(e);
+        alert("保存失败，可能是存储空间不足。");
+    }
+}
+
+// 2. 读取功能：从浏览器加载数据
+function loadLayout() {
+    try {
+        const savedScreen = localStorage.getItem('myIOS_HomeScreen');
+        const savedLib = localStorage.getItem('myIOS_Library');
+
+        if (savedScreen) {
+            console.log("检测到已保存的布局，正在加载...");
+            homeScreenData = JSON.parse(savedScreen);
+        }
+
+        if (savedLib) {
+            console.log("检测到已导入的组件库，正在加载...");
+            importedWidgets = JSON.parse(savedLib);
+        }
+    } catch (e) {
+        console.error("读取存档失败，将使用默认布局", e);
+    }
+}
+
+// 3. 绑定保存按钮事件
+const saveBtn = document.getElementById('save-layout-btn');
+if (saveBtn) {
+    saveBtn.onclick = saveLayout;
+}
+
+// ============================================================
+// 修改：启动逻辑 (替换掉原来的启动代码)
+// ============================================================
+
+// 原来的启动代码通常是直接调用 initGrid()
+// 我们要把它改成：先 Load -> 再 Init
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+} else {
+    startApp();
+}
+
+function startApp() {
+    // 1. 先尝试读取存档
+    loadLayout();
+    
+    // 2. 再初始化网格
+    initGrid();
+    
+    // 3. 额外：如果在读取存档后，有些 DOM 组件位置不对，renderItems 会自动修正
+}

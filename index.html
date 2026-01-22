@@ -54,86 +54,106 @@
             </div>
         </div>
 
-        <!-- 顶部区域 -->
-        <div class="top-section">
-            <!-- 音乐小组件 -->
-            <div class="music-widget" id="music-widget">
-                <div class="vinyl-wrapper">
-                    <div class="vinyl-disk" id="vinyl-disk">
-                        <div class="vinyl-cover" id="vinyl-cover" style="background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix');"></div>
-                    </div>
-                </div>
-                <div class="music-info">
-                    <div class="song-title" id="song-title">Happy Together</div>
-                    <div class="artist-name" id="artist-name">Maximillian</div>
-                    <div class="lyrics-display" id="lyrics-display">
-                        So fast, I almost missed it<br>
-                        I spill another glass of wine<br>
-                        Kill the lights to pass the time
-                    </div>
-                    <div class="music-controls-mini">
-                        <i class="fas fa-play" id="play-icon"></i>
-                    </div>
-                </div>
+       
+
+        <!-- 主要内容区域 -->
+        <div class="main-content" style="display: block; padding-top: 10px;">
+    <div id="home-screen-grid" class="home-screen-grid"></div>
+    <!-- 编辑工具栏等... -->
+    <div id="edit-mode-toolbar" class="hidden">
+        <button id="add-widget-btn" class="ios-btn-small" style="background:#007AFF;">+ 小组件</button>
+        <button id="save-layout-btn" class="ios-btn-small" style="background:#34C759;">保存布局</button>
+
+        <button id="exit-edit-btn" class="ios-btn-small">退出</button>
+    </div>
+    <input type="file" id="widget-file-input" accept=".json" class="file-input-hidden">
+</div>
+
+<!-- 2. 【关键步骤】组件仓库：把你原来的复杂 HTML 代码原封不动移到这里 -->
+<div id="widget-repository">
+    
+    <!-- === 音乐小组件 (从原来的 .top-section 剪切过来) === -->
+    <div class="music-widget" id="music-widget">
+        <div class="vinyl-wrapper">
+            <div class="vinyl-disk" id="vinyl-disk">
+                <div class="vinyl-cover" id="vinyl-cover" style="background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix');"></div>
+            </div>
+        </div>
+        <div class="music-info">
+            <div class="song-title" id="song-title">Happy Together</div>
+            <div class="artist-name" id="artist-name">Maximillian</div>
+            <div class="lyrics-display" id="lyrics-display">
+                So fast, I almost missed it<br>
+                I spill another glass of wine
+            </div>
+            <div class="music-controls-mini">
+                <i class="fas fa-play" id="play-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- === 拍立得小组件 (从原来的 .left-area 剪切过来) === -->
+    <div class="polaroid-widget" id="polaroid-widget">
+        <!-- 底部拍立得 -->
+        <div class="polaroid-card bottom-card">
+            <div class="polaroid-img-container">
+                <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-2" alt="Photo">
+            </div>
+            <div class="polaroid-text" id="polaroid-text-2">美好回忆</div>
+        </div>
+        <!-- 顶部拍立得 -->
+        <div class="polaroid-card top-card">
+            <div class="polaroid-img-container">
+                <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-1" alt="Photo">
+            </div>
+            <div class="polaroid-text" id="polaroid-text-1">讨厌坏天气</div>
+            <div class="tape-strip"></div>
+        </div>
+        <!-- 隐藏的文件输入框 -->
+        <input type="file" id="polaroid-input-1" accept="image/*" class="file-input-hidden">
+        <input type="file" id="polaroid-input-2" accept="image/*" class="file-input-hidden">
+    </div>
+
+</div>
+
+<!-- 小组件库弹窗 -->
+<div id="widget-library-modal" class="widget-library-modal">
+    <div class="library-header">
+        <h3 style="margin:0;">小组件库</h3>
+        <button id="close-library-btn" class="ios-btn-small" style="background: #e5e5ea; color: #000;">关闭</button>
+    </div>
+    
+    <div class="library-body">
+        
+        <!-- 工具栏：导入按钮 -->
+        <div style="margin-bottom: 20px;">
+             <button id="import-json-btn" class="ios-btn-block" style="background-color: #007AFF;">
+                <i class="fas fa-file-import"></i> 导入 JSON 组件包
+             </button>
+        </div>
+
+        <!-- 1. 系统组件 -->
+        <div>
+            <div class="library-section-title">系统组件</div>
+            <div class="library-scroll-row" id="lib-system-row">
+                <!-- JS 会自动在这里生成音乐和拍立得的选项 -->
             </div>
         </div>
 
-        <!-- 主要内容区域 -->
-        <div class="main-content">
-            <!-- 左侧拍立得小组件 -->
-            <div class="left-area">
-                <div class="polaroid-widget" id="polaroid-widget">
-                    <!-- 底部拍立得 -->
-                    <div class="polaroid-card bottom-card">
-                        <div class="polaroid-img-container">
-                            <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-2" alt="Photo">
-                        </div>
-                        <div class="polaroid-text" id="polaroid-text-2">美好回忆</div>
-                    </div>
-                    <!-- 顶部拍立得 -->
-                    <div class="polaroid-card top-card">
-                        <div class="polaroid-img-container">
-                            <img src="https://placehold.co/300x300/eee/999?text=Photo" id="polaroid-img-1" alt="Photo">
-                        </div>
-                        <div class="polaroid-text" id="polaroid-text-1">讨厌坏天气</div>
-                        <div class="tape-strip"></div>
-                    </div>
-                    <!-- 隐藏的文件输入框 -->
-                    <input type="file" id="polaroid-input-1" accept="image/*" class="file-input-hidden">
-                    <input type="file" id="polaroid-input-2" accept="image/*" class="file-input-hidden">
-                </div>
-            </div>
-            
-            <!-- 右侧应用网格 -->
-            <div class="right-area">
-                <div class="app-grid">
-                    <div class="app-item" id="app-wechat">
-                        <div class="app-icon icon-wechat">
-                            <i class="fab fa-weixin"></i>
-                        </div>
-                        <span class="app-label">微信</span>
-                    </div>
-                    <div class="app-item" id="app-worldbook">
-                        <div class="app-icon icon-world">
-                            <i class="fas fa-globe"></i>
-                        </div>
-                        <span class="app-label">世界书</span>
-                    </div>
-                    <div class="app-item" id="app-settings">
-                        <div class="app-icon icon-settings">
-                            <i class="fas fa-cog"></i>
-                        </div>
-                        <span class="app-label">设置</span>
-                    </div>
-                    <div class="app-item" id="app-theme">
-                        <div class="app-icon icon-theme">
-                            <i class="fas fa-paint-brush"></i>
-                        </div>
-                        <span class="app-label">美化</span>
-                    </div>
-                </div>
+        <!-- 2. 已导入的组件 -->
+        <div style="margin-top: 20px;">
+            <div class="library-section-title">已导入</div>
+            <div class="library-scroll-row" id="lib-custom-row">
+                <div style="color: #888; font-size: 14px; padding: 20px;">暂无导入的组件</div>
             </div>
         </div>
+
+    </div>
+</div>
+            <!-- 1. 新的网格容器 (和上次一样) -->
+
+            <!-- 左侧拍立得小组件 -->
+           
 
         <!-- 底部Dock栏 -->
         <div class="dock-bar">
@@ -1859,15 +1879,7 @@
     <!-- 引入 localForage 用于存储大文件 (可选，如果需要) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="script.js"></script>
-<script src="homeGrid.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var grid = new HomeGridSystem({
-      containerSelector: '.app-grid',
-      itemSelector: '.app-item'
-    });
-    grid.init();
-  });
-</script>
+
+
 </body>
 </html>
