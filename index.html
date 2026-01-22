@@ -1859,5 +1859,15 @@
     <!-- 引入 localForage 用于存储大文件 (可选，如果需要) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="script.js"></script>
+<script src="homeGrid.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var grid = new HomeGridSystem({
+      containerSelector: '.app-grid',
+      itemSelector: '.app-item'
+    });
+    grid.init();
+  });
+</script>
 </body>
 </html>
