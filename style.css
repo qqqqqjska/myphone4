@@ -507,8 +507,11 @@ body {
 
 /* 底部Dock栏 */
 .dock-bar {
-    margin: 15px;
-    margin-bottom: 34px; /* Home indicator space */
+    position: absolute;
+    bottom: 34px;
+    left: 15px;
+    right: 15px;
+    margin: 0;
     background-color: var(--dock-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -516,6 +519,7 @@ body {
     padding: 18px 20px;
     display: flex;
     justify-content: center;
+    z-index: 100;
 }
 
 .dock-container {
@@ -3684,9 +3688,9 @@ input.msg-select-checkbox {
     /* 4列，每列等宽 */
     grid-template-columns: repeat(4, 1fr);
     /* 6行，每行高度固定80px，间距自适应 */
-    grid-template-rows: repeat(6, 80px); 
-    gap: 15px 10px; /* 行间距15px，列间距10px */
-    padding: 20px 20px 80px 20px; /* 底部留白给 Dock */
+    grid-template-rows: repeat(6, 85px); 
+    gap: 20px 15px; /* 行间距25px，列间距15px */
+    padding: 40px 20px 80px 20px; /* 顶部留白60px避开灵动岛，底部留白给 Dock */
     width: 100%;
     box-sizing: border-box;
     position: relative;
