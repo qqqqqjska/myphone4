@@ -11,9 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatusBar: true,
         css: '',
         currentFont: 'default',
+        currentMeetingFont: 'default', // <--- 新增这一行
         currentWallpaper: null,
         fontPresets: [],
         cssPresets: [],
+        meetingCss: '', // 见面模式自定义CSS
+        meetingCssPresets: [], // 见面模式CSS预设
         aiSettings: {
             url: '',
             key: '',
@@ -36,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         contactGroups: [], // ['分组1', '分组2']
         currentChatContactId: null,
         chatHistory: {}, // { contactId: [{ role: 'user'|'assistant', content: '...' }] }
+        meetings: {}, // { contactId: [{ id, time, title, content: [{role, text}], style, linkedWorldbooks }] }
+        currentMeetingId: null, // 当前正在进行的见面ID
         worldbook: [], // { id, categoryId, keys: [], content: '', enabled: true, remark: '' }
         wbCategories: [], // { id, name, desc }
         currentWbCategoryId: null,
@@ -268,10 +273,12 @@ let currentEditingChatMsgId = null;
         
         initMusicWidget();
         initPolaroidWidget();
+        initMeetingTheme(); // 初始化见面美化
 
         renderIconPresets();
         renderFontPresets();
         renderCssPresets();
+        renderMeetingCssPresets(); // 渲染见面CSS预设
         renderAiPresets();
         renderAiPresets(true);
         updateAiUi();
@@ -813,20 +820,77 @@ let currentEditingChatMsgId = null;
         const aiProfileBgInput = document.getElementById('ai-profile-bg-input');
         const aiProfileBg = document.getElementById('ai-profile-bg');
         const aiRelationItem = document.getElementById('ai-relation-item');
+                // ... (找到 aiRelationItem 相关的代码，在它后面添加) ...
+
+        // === 修改开始：资料卡“见面”按钮逻辑 ===
+        const currentAiProfileSendMsgBtn = document.getElementById('ai-profile-send-msg');
+        if (currentAiProfileSendMsgBtn) {
+            // 移除旧的监听器（为了防止重复，使用克隆节点替换法）
+            const newBtn = currentAiProfileSendMsgBtn.cloneNode(true);
+            currentAiProfileSendMsgBtn.parentNode.replaceChild(newBtn, currentAiProfileSendMsgBtn);
+            
+            newBtn.addEventListener('click', () => {
+                // 点击后直接进入见面列表页
+                openMeetingsScreen(state.currentChatContactId);
+            });
+        }
+        // === 修改结束 ===
+
+        // === 新增：见面功能相关事件监听 ===
+        // 1. 列表页和弹窗
+        const closeMeetingsScreenBtn = document.getElementById('close-meetings-screen');
+        const newMeetingBtn = document.getElementById('new-meeting-btn');
+        const meetingStyleBtn = document.getElementById('meeting-style-btn');
+        const meetingStyleModal = document.getElementById('meeting-style-modal');
+        const closeMeetingStyleBtn = document.getElementById('close-meeting-style');
+        const saveMeetingStyleBtn = document.getElementById('save-meeting-style-btn');
+
+        if (closeMeetingsScreenBtn) closeMeetingsScreenBtn.addEventListener('click', () => {
+            document.getElementById('meetings-screen').classList.add('hidden');
+        });
+
+        if (newMeetingBtn) newMeetingBtn.addEventListener('click', createNewMeeting);
+
+        if (meetingStyleBtn) meetingStyleBtn.addEventListener('click', () => {
+            const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+            if(contact) {
+                document.getElementById('meeting-style-input').value = contact.meetingStyle || '';
+            }
+            meetingStyleModal.classList.remove('hidden');
+        });
+
+        if (closeMeetingStyleBtn) closeMeetingStyleBtn.addEventListener('click', () => meetingStyleModal.classList.add('hidden'));
+        if (saveMeetingStyleBtn) saveMeetingStyleBtn.addEventListener('click', saveMeetingStyle);
+
+        // 2. 详情页交互
+        const endMeetingBtn = document.getElementById('end-meeting-btn');
+        const meetingSendBtn = document.getElementById('meeting-send-btn');
+        // const meetingGenerateBtn = document.getElementById('meeting-generate-btn'); // 稍后在下一步实现
+
+        if (endMeetingBtn) endMeetingBtn.addEventListener('click', endMeeting);
+        if (meetingSendBtn) meetingSendBtn.addEventListener('click', handleSendMeetingText);
+
+        // 3. 输入框高度自适应
+        const meetingInput = document.getElementById('meeting-input');
+        if (meetingInput) {
+            meetingInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if(this.value === '') this.style.height = 'auto';
+            });
+        }
+        // === 新增结束 ===
+
+        // ... (接原本的 if (aiMomentsEntry) ... )
+
         const relationSelectModal = document.getElementById('relation-select-modal');
         const closeRelationSelectBtn = document.getElementById('close-relation-select');
         const aiMomentsEntry = document.getElementById('ai-moments-entry');
 
         if (closeAiProfileBtn) closeAiProfileBtn.addEventListener('click', () => aiProfileScreen.classList.add('hidden'));
         if (aiProfileMoreBtn) aiProfileMoreBtn.addEventListener('click', openChatSettings); // 资料卡更多按钮也打开设置
-        if (aiProfileSendMsgBtn) aiProfileSendMsgBtn.addEventListener('click', () => {
-            aiProfileScreen.classList.add('hidden');
-            // 已经在聊天界面了，或者从通讯录进来的话需要打开聊天
-            if (state.currentChatContactId) {
-                openChat(state.currentChatContactId);
-            }
-        });
         
+
         if (aiProfileBg) aiProfileBg.addEventListener('click', () => aiProfileBgInput.click());
         if (aiProfileBgInput) aiProfileBgInput.addEventListener('change', handleAiProfileBgUpload);
         
@@ -1469,6 +1533,95 @@ let currentEditingChatMsgId = null;
             if (polaroidInput1) polaroidInput1.addEventListener('change', (e) => handlePolaroidImageUpload(e, 1));
             if (polaroidInput2) polaroidInput2.addEventListener('change', (e) => handlePolaroidImageUpload(e, 2));
         }
+                // ==========================================
+        // [最终清洗版] 见面功能绑定 (防止双重触发)
+        // ==========================================
+        
+        // 辅助函数：彻底重置按钮（清除所有旧事件）
+        function resetButton(id, newHandler) {
+            const oldBtn = document.getElementById(id);
+            if (oldBtn) {
+                const newBtn = oldBtn.cloneNode(true);
+                oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+                newBtn.onclick = newHandler;
+            }
+        }
+
+        // 1. 绑定资料卡“见面”按钮
+        resetButton('ai-profile-send-msg', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            const contactId = state.currentChatContactId;
+            if (!contactId) return;
+
+            document.getElementById('ai-profile-screen').classList.add('hidden');
+            const meetingsScreen = document.getElementById('meetings-screen');
+            if (meetingsScreen) {
+                meetingsScreen.classList.remove('hidden');
+                meetingsScreen.style.zIndex = '200';
+                if (typeof renderMeetingsList === 'function') {
+                    renderMeetingsList(contactId);
+                }
+            }
+        });
+
+        // 2. 绑定见面列表页的关闭按钮
+        resetButton('close-meetings-screen', function() {
+            document.getElementById('meetings-screen').classList.add('hidden');
+        });
+
+        // 3. 绑定新建见面按钮
+        resetButton('new-meeting-btn', function() {
+            if (typeof createNewMeeting === 'function') {
+                createNewMeeting();
+            }
+        });
+        
+        // 4. 绑定详情页返回按钮 (结束按钮)
+        resetButton('end-meeting-btn', function() {
+            if (typeof endMeeting === 'function') {
+                endMeeting();
+            } else {
+                // 兜底
+                document.getElementById('meeting-detail-screen').classList.add('hidden');
+                document.getElementById('meetings-screen').classList.add('hidden');
+            }
+        });
+        
+        // 5. 绑定详情页发送按钮
+        resetButton('meeting-send-btn', function() {
+            if (typeof handleSendMeetingText === 'function') {
+                handleSendMeetingText();
+            }
+        });
+
+        // 6. 绑定文风设置按钮 (如果有的话)
+        resetButton('meeting-style-btn', function() {
+             const modal = document.getElementById('meeting-style-modal');
+             if(modal) modal.classList.remove('hidden');
+        });
+        
+        // 7. 绑定文风关闭和保存
+        resetButton('close-meeting-style', function() {
+             document.getElementById('meeting-style-modal').classList.add('hidden');
+        });
+        resetButton('save-meeting-style-btn', function() {
+             // 简单的保存逻辑
+             const styleVal = document.getElementById('meeting-style-input').value;
+             // 这里可以存到 contact 或者全局，暂时先存全局或者打印
+             console.log("文风已保存:", styleVal);
+             document.getElementById('meeting-style-modal').classList.add('hidden');
+        });
+                // 8. 绑定 AI 续写按钮
+        resetButton('meeting-ai-continue-btn', function() {
+            if (typeof handleMeetingAI === 'function') {
+                handleMeetingAI('continue');
+            }
+        });
+        
+         
+
+
     }
 
     // --- 拍立得组件功能 ---
@@ -5282,9 +5435,8 @@ JSON格式示例：
                     <div class="voice-icon-box"><i class="fas fa-rss"></i></div>
                     <span class="voice-dur-text">${duration}</span>
                 </div>
-                <div id="${uid}" class="voice-text-bottom hidden">
-                    ${transText}
-                </div>
+                <div id="${uid}" class="voice-text-bottom hidden">${transText}</div>
+
             `;
         }
 
@@ -5784,6 +5936,30 @@ JSON格式示例：
             itineraryContext = await getCurrentItineraryInfo(contact.id);
         }
 
+        // 获取线下见面上下文
+        let meetingContext = '';
+        if (state.meetings && state.meetings[contact.id] && state.meetings[contact.id].length > 0) {
+            // 获取最近的一次见面
+            const meetings = state.meetings[contact.id];
+            const lastMeeting = meetings[meetings.length - 1];
+            
+            // 提取最近的剧情 (最后 5 条)
+            let meetingContent = '';
+            if (lastMeeting.content && lastMeeting.content.length > 0) {
+                const recentContent = lastMeeting.content.slice(-5);
+                meetingContent = recentContent.map(c => {
+                    const role = c.role === 'user' ? '用户' : contact.name;
+                    return `${role}: ${c.text}`;
+                }).join('\n');
+            }
+
+            if (meetingContent) {
+                const meetingDate = new Date(lastMeeting.time);
+                const meetingTimeStr = `${meetingDate.getMonth() + 1}月${meetingDate.getDate()}日`;
+                meetingContext = `\n【线下见面记忆】\n你们最近一次见面是在 ${meetingTimeStr} (${lastMeeting.title})。\n当时发生的剧情片段：\n${meetingContent}\n(请知晓你们已经见过面，并根据剧情发展进行聊天)\n`;
+            }
+        }
+
         // 构建 Prompt
         let systemPrompt = `你现在扮演 ${contact.name}。
 人设：${contact.persona || '无'}
@@ -5791,6 +5967,7 @@ JSON格式示例：
 ${userPromptInfo}
 ${momentContext}
 ${memoryContext}
+${meetingContext}
 ${timeContext}
 ${itineraryContext}
 
@@ -7062,14 +7239,44 @@ ${itineraryContext}
     function handleFontUrl() {
         const url = document.getElementById('font-url').value.trim();
         if (!url) return;
+        addWebFont(url);
+        document.getElementById('font-url').value = '';
+    }
 
-        const fontName = `WebFont_${Date.now()}`;
+    function handleMeetingFontUrl() {
+        const url = document.getElementById('meeting-font-url').value.trim();
+        if (!url) return;
+        
+        const fontName = `MeetingWebFont_${Date.now()}`;
         const style = document.createElement('style');
         style.textContent = `@font-face { font-family: '${fontName}'; src: url('${url}'); }`;
         document.head.appendChild(style);
         
+        // 添加到字体列表但不切换全局
+        state.fonts.push({ name: fontName, source: url, type: 'url' });
+        
+        // 仅切换见面字体
+        state.currentMeetingFont = fontName;
+        applyMeetingFont(fontName);
+        saveConfig();
+        
+        document.getElementById('meeting-font-url').value = '';
+        alert('网络字体已应用到见面详情页');
+    }
+
+    function addWebFont(url) {
+        const fontName = `WebFont_${Date.now()}`;
+        const style = document.createElement('style');
+        style.textContent = `@font-face { font-family: '${fontName}'; src: url('${url}'); }`;
+        document.head.appendChild(style);
         addFontToState(fontName, url, 'url');
-        document.getElementById('font-url').value = '';
+    }
+
+    function resetFont() {
+        state.currentFont = 'default';
+        applyFont('default');
+        saveConfig();
+        alert('已重置为系统默认字体');
     }
 
     function addFontToState(name, source, type) {
@@ -7113,6 +7320,77 @@ ${itineraryContext}
         applyFont('default');
         saveConfig();
     }
+    // === 新增：专门用于应用见面字体的函数 ===
+function applyMeetingFont(fontName) {
+    if (fontName === 'default') {
+        // 恢复为跟随全局或系统默认
+        document.documentElement.style.setProperty('--meeting-font-family', 'var(--font-family)');
+    } else {
+        const font = state.fonts.find(f => f.name === fontName);
+        if (font) {
+            // 确保字体样式标签已创建（复用已有的加载逻辑）
+            if (font.type === 'url' && !document.getElementById(`style-${font.name}`)) {
+                const style = document.createElement('style');
+                style.id = `style-${font.name}`;
+                style.textContent = `@font-face { font-family: '${font.name}'; src: url('${font.source}'); }`;
+                document.head.appendChild(style);
+            }
+            // 关键点：只修改 --meeting-font-family 变量
+            document.documentElement.style.setProperty('--meeting-font-family', fontName);
+        }
+    }
+}
+
+// === 新增：处理见面字体预设应用 ===
+function handleApplyMeetingFontPreset(e) {
+    const name = e.target.value;
+    if (!name) return;
+    
+    const preset = state.fontPresets.find(p => p.name === name);
+    if (preset) {
+        state.currentMeetingFont = preset.font;
+        applyMeetingFont(preset.font);
+        saveConfig();
+    }
+}
+
+// === 新增：处理见面字体上传 ===
+function handleMeetingFontUploadAction(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const fontName = `MeetingFont_${Date.now()}`;
+        const fontFace = new FontFace(fontName, `url(${event.target.result})`);
+        
+        fontFace.load().then((loadedFace) => {
+            document.fonts.add(loadedFace);
+            // 添加到全局字体列表（这样也能被保存）
+            addFontToState(fontName, event.target.result, 'local'); 
+            
+            // 但是！只应用到见面模式
+            state.currentMeetingFont = fontName;
+            applyMeetingFont(fontName);
+            saveConfig();
+            
+            alert('字体上传成功，已仅应用于见面模式');
+        }).catch(err => {
+            console.error('字体加载失败:', err);
+            alert('字体加载失败，请检查文件格式');
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+}
+
+// === 新增：处理见面字体重置 ===
+function resetMeetingFont() {
+    state.currentMeetingFont = 'default';
+    applyMeetingFont('default');
+    saveConfig();
+    alert('见面字体已重置为默认');
+}
 
     // --- 字体预设功能 ---
 
@@ -7157,25 +7435,31 @@ ${itineraryContext}
     }
 
     function renderFontPresets() {
-        const select = document.getElementById('font-preset-select');
-        if (!select) return;
+        const selects = [
+            document.getElementById('font-preset-select'),
+            document.getElementById('meeting-font-preset-select')
+        ];
         
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">-- 选择预设 --</option>';
-        
-        if (state.fontPresets) {
-            state.fontPresets.forEach(preset => {
-                const option = document.createElement('option');
-                option.value = preset.name;
-                option.textContent = preset.name;
-                select.appendChild(option);
-            });
-        }
-        
-        // 尝试恢复选中状态
-        if (currentValue && state.fontPresets.some(p => p.name === currentValue)) {
-            select.value = currentValue;
-        }
+        selects.forEach(select => {
+            if (!select) return;
+            
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">-- 选择预设 --</option>';
+            
+            if (state.fontPresets) {
+                state.fontPresets.forEach(preset => {
+                    const option = document.createElement('option');
+                    option.value = preset.name;
+                    option.textContent = preset.name;
+                    select.appendChild(option);
+                });
+            }
+            
+            // 尝试恢复选中状态
+            if (currentValue && state.fontPresets.some(p => p.name === currentValue)) {
+                select.value = currentValue;
+            }
+        });
     }
 
     // --- 壁纸功能 ---
@@ -7619,6 +7903,165 @@ ${itineraryContext}
         }
     }
 
+    // --- 见面模式美化功能 ---
+
+    function initMeetingTheme() {
+        const btn = document.getElementById('meeting-theme-btn');
+        const modal = document.getElementById('meeting-theme-modal');
+        const closeBtn = document.getElementById('close-meeting-theme');
+        
+        if (btn) {
+            btn.addEventListener('click', () => {
+                // 初始化编辑器内容
+                const editor = document.getElementById('meeting-css-editor');
+                if (editor) editor.value = state.meetingCss || '';
+                
+                modal.classList.remove('hidden');
+            });
+        }
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        }
+
+        // 字体相关绑定
+        
+        
+        const applyFontUrlBtn = document.getElementById('apply-meeting-font-url');
+        if (applyFontUrlBtn) applyFontUrlBtn.addEventListener('click', handleMeetingFontUrl);
+        
+        const saveFontPresetBtn = document.getElementById('save-meeting-font-preset');
+        if (saveFontPresetBtn) saveFontPresetBtn.addEventListener('click', handleSaveFontPreset);
+        
+        const deleteFontPresetBtn = document.getElementById('delete-meeting-font-preset');
+        if (deleteFontPresetBtn) deleteFontPresetBtn.addEventListener('click', handleDeleteFontPreset);
+        // --- 在 initMeetingTheme 函数内部替换为以下代码 ---
+
+// --- 新代码 (使用上面定义的专用函数) ---
+
+// 1. 绑定上传 -> handleMeetingFontUploadAction
+const fontUpload = document.getElementById('meeting-font-upload');
+if (fontUpload) {
+    // 克隆节点以移除旧监听器
+    const newUpload = fontUpload.cloneNode(true);
+    fontUpload.parentNode.replaceChild(newUpload, fontUpload);
+    newUpload.addEventListener('change', handleMeetingFontUploadAction);
+}
+
+// 2. 绑定预设 -> handleApplyMeetingFontPreset
+const fontPresetSelect = document.getElementById('meeting-font-preset-select');
+if (fontPresetSelect) {
+    const newSelect = fontPresetSelect.cloneNode(true);
+    fontPresetSelect.parentNode.replaceChild(newSelect, fontPresetSelect);
+    newSelect.addEventListener('change', handleApplyMeetingFontPreset);
+}
+
+// 3. 绑定重置 -> resetMeetingFontAction
+const resetFontBtn = document.getElementById('reset-meeting-font-btn');
+if (resetFontBtn) {
+    const newReset = resetFontBtn.cloneNode(true);
+    resetFontBtn.parentNode.replaceChild(newReset, resetFontBtn);
+    newReset.addEventListener('click', resetMeetingFontAction);
+}
+
+
+        
+        // 现有美化设置里的重置按钮
+        const mainResetFontBtn = document.getElementById('reset-font-btn');
+        if (mainResetFontBtn) mainResetFontBtn.addEventListener('click', resetFont);
+
+        // CSS 相关绑定
+        const saveCssBtn = document.getElementById('save-meeting-css-preset');
+        if (saveCssBtn) saveCssBtn.addEventListener('click', handleSaveMeetingCssPreset);
+        
+        const deleteCssBtn = document.getElementById('delete-meeting-css-preset');
+        if (deleteCssBtn) deleteCssBtn.addEventListener('click', handleDeleteMeetingCssPreset);
+        
+        const cssSelect = document.getElementById('meeting-css-preset-select');
+        if (cssSelect) cssSelect.addEventListener('change', handleApplyMeetingCssPreset);
+        
+        const applyCssBtn = document.getElementById('apply-meeting-css-btn');
+        if (applyCssBtn) applyCssBtn.addEventListener('click', () => {
+            const css = document.getElementById('meeting-css-editor').value;
+            state.meetingCss = css;
+            applyMeetingCss(css);
+            saveConfig();
+            alert('见面模式 CSS 已应用');
+        });
+    }
+
+    function applyMeetingCss(cssContent) {
+        let styleEl = document.getElementById('meeting-custom-css');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'meeting-custom-css';
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = cssContent || '';
+    }
+
+    function handleSaveMeetingCssPreset() {
+        const name = prompt('请输入见面模式 CSS 预设名称：');
+        if (!name) return;
+        
+        const cssContent = document.getElementById('meeting-css-editor').value;
+        
+        const preset = {
+            name: name,
+            css: cssContent
+        };
+        
+        if (!state.meetingCssPresets) state.meetingCssPresets = [];
+        state.meetingCssPresets.push(preset);
+        saveConfig();
+        renderMeetingCssPresets();
+        document.getElementById('meeting-css-preset-select').value = name;
+        alert('预设已保存');
+    }
+
+    function handleDeleteMeetingCssPreset() {
+        const select = document.getElementById('meeting-css-preset-select');
+        const name = select.value;
+        if (!name) return;
+        
+        if (confirm(`确定要删除预设 "${name}" 吗？`)) {
+            state.meetingCssPresets = state.meetingCssPresets.filter(p => p.name !== name);
+            saveConfig();
+            renderMeetingCssPresets();
+        }
+    }
+
+    function handleApplyMeetingCssPreset(e) {
+        const name = e.target.value;
+        if (!name) return;
+        
+        const preset = state.meetingCssPresets.find(p => p.name === name);
+        if (preset) {
+            document.getElementById('meeting-css-editor').value = preset.css;
+        }
+    }
+
+    function renderMeetingCssPresets() {
+        const select = document.getElementById('meeting-css-preset-select');
+        if (!select) return;
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- 选择预设 --</option>';
+        
+        if (state.meetingCssPresets) {
+            state.meetingCssPresets.forEach(preset => {
+                const option = document.createElement('option');
+                option.value = preset.name;
+                option.textContent = preset.name;
+                select.appendChild(option);
+            });
+        }
+        
+        if (currentValue && state.meetingCssPresets.some(p => p.name === currentValue)) {
+            select.value = currentValue;
+        }
+    }
+
     // --- 聊天设置 CSS 预设功能 ---
 
     function handleSaveChatCssPreset() {
@@ -7968,13 +8411,22 @@ ${itineraryContext}
                 if (cssEditor) cssEditor.value = state.css;
                 
                 applyFont(state.currentFont);
+                // 在 loadConfig 函数内部找到 applyFont(state.currentFont);
+// 在它下面添加：
+
+                if (state.currentMeetingFont) {
+                    applyMeetingFont(state.currentMeetingFont);
+                }
+
                 applyWallpaper(state.currentWallpaper);
                 applyIcons();
                 applyCSS(state.css);
+                applyMeetingCss(state.meetingCss); // 应用见面CSS
                 
                 renderIconPresets();
                 renderFontPresets();
                 renderCssPresets();
+                renderMeetingCssPresets();
                 renderAiPresets();
                 renderAiPresets(true);
                 updateAiUi();
@@ -8772,7 +9224,7 @@ ${itineraryContext}
         document.getElementById('chat-setting-group-value').textContent = groupName || '未分组';
         document.getElementById('group-select-modal').classList.add('hidden');
     }
-});
+
 /* ============================================================
    全新的组件库与主屏幕管理系统 (完整修复版)
    ============================================================ */
@@ -8995,20 +9447,15 @@ function createCustomJsonWidget(item, draggable) {
     div.classList.add('custom-widget');
     div.setAttribute('draggable', draggable);
     
-    // 确保这里有 height: 100%
+    // 确保组件填满格子
     div.style.width = '100%';
     div.style.height = '100%'; 
-    
-    // ... 后面的代码 ...
-
     
     const content = document.createElement('div');
     content.style.width = '100%'; content.style.height = '100%'; 
     content.style.borderRadius = '18px'; content.style.overflow = 'hidden';
     
-    // 注意：移除 pointerEvents = 'none'，否则无法点击组件内的上传按钮
-    // 如果需要拖拽，可以只在图片区域禁止事件，或者依靠 grid 的拖拽手柄
-    // 这里为了功能可用性，允许交互
+    // 编辑模式下禁止内部交互以便拖拽，非编辑模式下允许交互
     if(isEditMode) {
         content.style.pointerEvents = 'none'; 
     } else {
@@ -9022,12 +9469,49 @@ function createCustomJsonWidget(item, draggable) {
     }
     
     const htmlDiv = document.createElement('div');
-    // 使用保存的 HTML (如果有状态变更，这里会加载变更后的 HTML)
     htmlDiv.innerHTML = item.html;
     htmlDiv.style.height = '100%';
     
-    // --- 新增：核心修复逻辑 ---
-    // 自动绑定组件内部的文件输入框，实现图片持久化
+    // --- 内部辅助函数：静默保存数据 ---
+    const silentSave = () => {
+        try {
+            localStorage.setItem('myIOS_HomeScreen', JSON.stringify(homeScreenData));
+            // 同时也保存库，防止引用丢失
+            localStorage.setItem('myIOS_Library', JSON.stringify(importedWidgets)); 
+            console.log('Widget state auto-saved');
+        } catch (e) {
+            console.error('Auto-save failed', e);
+        }
+    };
+
+    // --- 内部辅助函数：图片压缩 ---
+    const processImage = (file, callback) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                // 限制最大尺寸为 600px 以节省 LocalStorage 空间
+                const maxDim = 600;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h *= maxDim/w; w = maxDim; }
+                    else { w *= maxDim/h; h = maxDim; }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(img, 0, 0, w, h);
+                // 压缩为 JPEG 0.7 质量
+                callback(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        };
+        reader.readAsDataURL(file);
+    };
+    
+    // --- 核心修复逻辑：自动绑定文件输入框 ---
     const fileInputs = htmlDiv.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => {
         // 防止点击穿透触发拖拽或其他行为
@@ -9037,15 +9521,16 @@ function createCustomJsonWidget(item, draggable) {
             const file = e.target.files[0];
             if (!file) return;
 
-            // 使用现有的压缩工具
-            compressImage(file, 600, 0.7).then(base64 => {
-                // 1. 尝试寻找目标图片元素 (优先查找 data-target 属性，其次找前一个 img)
+            processImage(file, (base64) => {
+                // 1. 寻找目标图片元素 (逻辑优化)
                 let targetImg = null;
+                
+                // 优先：通过 data-target 属性寻找
                 if (input.dataset.target) {
                     targetImg = htmlDiv.querySelector('#' + input.dataset.target);
                 }
+                // 其次：寻找输入框紧邻的前一个 img 元素
                 if (!targetImg) {
-                    // 尝试找输入框之前的 img 兄弟元素
                     let sibling = input.previousElementSibling;
                     while(sibling) {
                         if (sibling.tagName === 'IMG') {
@@ -9055,21 +9540,25 @@ function createCustomJsonWidget(item, draggable) {
                         sibling = sibling.previousElementSibling;
                     }
                 }
-                // 最后的兜底：找组件内第一个 img
+                // 再次：寻找输入框父元素内的 img
+                if (!targetImg && input.parentElement) {
+                    targetImg = input.parentElement.querySelector('img');
+                }
+                // 兜底：组件内第一个 img
                 if (!targetImg) targetImg = htmlDiv.querySelector('img');
 
                 if (targetImg) {
-                    targetImg.src = base64; // 更新视图
+                    // 【关键修复】显式设置 src 属性，确保 innerHTML 序列化时包含 base64 数据
+                    targetImg.setAttribute('src', base64);
+                    targetImg.src = base64; // 同时更新 DOM 属性以立即显示
                     
-                    // 2. 【关键】将更新后的 HTML 写回 item 数据对象
-                    // 这样下次 saveLayout 时就会保存带图片的 HTML
-                    // 注意：由于 file input 的 value 无法设置，我们主要保存 img 的 src
+                    // 2. 将更新后的 HTML 写回数据对象
                     item.html = htmlDiv.innerHTML;
                     
-                    // 3. 立即触发保存
-                    saveLayout();
+                    // 3. 静默保存
+                    silentSave();
                 }
-            }).catch(err => console.error("Widget image save failed", err));
+            });
         });
     });
 
@@ -9077,8 +9566,8 @@ function createCustomJsonWidget(item, draggable) {
     htmlDiv.addEventListener('input', () => {
         item.html = htmlDiv.innerHTML;
     });
-    // 失去焦点时保存
-    htmlDiv.addEventListener('blur', () => saveLayout(), true);
+    // 失去焦点时自动保存文本更改
+    htmlDiv.addEventListener('blur', () => silentSave(), true);
     // ---------------------------
 
     content.appendChild(htmlDiv);
@@ -9087,6 +9576,7 @@ function createCustomJsonWidget(item, draggable) {
     div.addEventListener('dragstart', (e) => handleDragStart(e, item));
     return div;
 }
+
 
 
 function addDeleteButton(slot, item) {
@@ -9535,102 +10025,139 @@ refreshButtons.forEach(btnId => {
     let recordedText = '';
 
     // 3. 切换录音状态
+        // 3. 切换录音状态 (修复版：移除 getUserMedia，专为 Safari 优化)
     function toggleVoiceRecording() {
         const micBtn = document.getElementById('voice-mic-btn');
         const statusText = document.getElementById('voice-recording-status');
         const resultDiv = document.getElementById('voice-real-result');
         const sendBtn = document.getElementById('send-real-voice-btn');
+        
+        // 兼容性定义
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('您的浏览器不支持语音转文字，请使用 iOS Safari 或 安卓 Chrome。');
+            return;
+        }
 
         if (!isRecording) {
-            // --- 开始录音 ---
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('您的浏览器不支持录音功能，请尝试使用 Chrome 或 Safari。');
-                return;
+            // ===========================
+            //      开始录音逻辑
+            // ===========================
+            
+            // 初始化识别实例
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = true;      // 允许连续说话
+            recognition.interimResults = true;  // 允许返回临时结果
+
+            // 重置状态变量
+            recordedText = '';
+            recordingStartTime = Date.now(); // 手动记录开始时间
+            
+            // --- 绑定事件 ---
+
+            // 1. 真正开始录音的回调
+            recognition.onstart = () => {
+                isRecording = true;
+                micBtn.classList.add('recording'); // 变红
+                statusText.textContent = '正在听... (点击停止)';
+                statusText.style.color = '#FF3B30';
+                resultDiv.textContent = '正在识别...';
+                sendBtn.disabled = true;
+                console.log('语音识别已启动');
+            };
+
+            // 2. 识别结果回调
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                // 累加最终结果
+                if (finalTranscript) {
+                    recordedText += finalTranscript;
+                }
+
+                // UI 显示：已确定的 + 正在猜的
+                resultDiv.textContent = recordedText + interimTranscript;
+                
+                // 只要有内容，就允许发送
+                if (recordedText || interimTranscript) {
+                    sendBtn.disabled = false;
+                }
+            };
+
+            // 3. 错误回调 (重点优化)
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                
+                // 忽略 'no-speech' (用户没说话) 和 'aborted' (手动停止)
+                if (event.error === 'no-speech' || event.error === 'aborted') return;
+
+                isRecording = false;
+                micBtn.classList.remove('recording');
+                statusText.textContent = '点击麦克风开始';
+                statusText.style.color = '#888';
+
+                if (event.error === 'not-allowed') {
+                    alert('无法访问麦克风。\n1. 请检查 Safari 设置权限。\n2. 必须使用 HTTPS 协议访问。');
+                } else if (event.error === 'network') {
+                    alert('网络连接错误，iOS 语音识别需要连接苹果服务器，请检查网络或 HTTPS 配置。');
+                } else {
+                    resultDiv.textContent = '识别出错: ' + event.error;
+                }
+            };
+
+            // 4. 结束回调
+            recognition.onend = () => {
+                // 如果是用户手动点击停止，这里什么都不用做，逻辑在下面 else 里
+                // 但如果是自动断开，我们需要重置 UI
+                if (isRecording) {
+                    // 某些情况下 Safari 会自动断开，这里尝试保持状态或提示
+                    console.log('识别自动断开');
+                    // 可选：如果是意外断开，可以自动重启 recognition.start();
+                }
+            };
+
+            // --- 启动 ---
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("启动失败", e);
+                alert("无法启动录音，请刷新页面重试。");
             }
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    isRecording = true;
-                    micBtn.classList.add('recording'); // 变红
-                    statusText.textContent = '正在听... (点击停止)';
-                    statusText.style.color = '#FF3B30';
-                    resultDiv.textContent = '正在识别...';
-                    sendBtn.disabled = true;
-                    audioChunks = [];
-                    recordedText = '';
-
-                    // 启动音频录制 (用于计算时长和可能的音频保存)
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-                    recordingStartTime = Date.now();
-
-                    mediaRecorder.onstop = () => {
-                        const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
-                        recordedDuration = duration > 60 ? 60 : duration;
-                        // 如果有识别结果，启用发送按钮
-                        if (recordedText) sendBtn.disabled = false;
-                        
-                        // 停止所有轨道释放麦克风
-                        stream.getTracks().forEach(track => track.stop());
-                    };
-
-                    // 启动语音识别 (Web Speech API)
-                    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                        recognition = new SpeechRecognition();
-                        recognition.lang = 'zh-CN';
-                        recognition.continuous = true;
-                        recognition.interimResults = true;
-
-                        recognition.onresult = (event) => {
-                            let finalTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += event.results[i][0].transcript;
-                                }
-                            }
-                            // 实时更新UI
-                            if (finalTranscript) {
-                                recordedText += finalTranscript;
-                            }
-                            // 显示当前识别的内容（包含未确定的部分）
-                            let interimTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (!event.results[i].isFinal) {
-                                    interimTranscript += event.results[i][0].transcript;
-                                }
-                            }
-                            resultDiv.textContent = recordedText + interimTranscript;
-                        };
-
-                        recognition.onerror = (event) => {
-                            console.error('语音识别错误', event.error);
-                            if (!recordedText) resultDiv.textContent = '识别失败，请检查麦克风权限或网络';
-                        };
-
-                        recognition.start();
-                    } else {
-                        resultDiv.textContent = '当前浏览器不支持语音转文字，将发送默认文本。';
-                        recordedText = '[语音消息]';
-                        sendBtn.disabled = false;
-                    }
-
-                })
-                .catch(err => {
-                    console.error('无法获取麦克风', err);
-                    alert('无法访问麦克风，请检查权限。');
-                });
         } else {
-            // --- 停止录音 ---
+            // ===========================
+            //      停止录音逻辑
+            // ===========================
+            if (recognition) {
+                recognition.stop();
+            }
             isRecording = false;
+            
+            // 计算时长 (手动计算)
+            const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
+            recordedDuration = duration > 60 ? 60 : duration;
+
+            // UI 恢复
             micBtn.classList.remove('recording');
             statusText.textContent = '录音结束';
             statusText.style.color = '#888';
             
-            if (mediaRecorder) mediaRecorder.stop();
-            if (recognition) recognition.stop();
+            // 确保如果有字就能发
+            if (recordedText) sendBtn.disabled = false;
         }
     }
+
 
     // 4. 发送真实录音
     function handleSendRealVoice() {
@@ -9647,3 +10174,679 @@ refreshButtons.forEach(btnId => {
         document.getElementById('voice-input-modal').classList.add('hidden');
     }
     // === 插入点 4 结束 ===
+    // --- 见面功能逻辑 ---
+    // ============================================================
+    // 见面功能核心逻辑 (Meeting System)
+    // ============================================================
+
+    // 1. 打开见面列表页
+    function openMeetingsScreen(contactId) {
+        if (!contactId) return;
+        
+        const contact = state.contacts.find(c => c.id === contactId);
+        if (!contact) return;
+
+        // 隐藏资料卡，显示见面列表
+        document.getElementById('ai-profile-screen').classList.add('hidden');
+        document.getElementById('meetings-screen').classList.remove('hidden');
+        
+        renderMeetingsList(contactId);
+    }
+
+    // 2. 渲染见面列表
+        // [修改版] 渲染见面列表（带删除功能）
+    function renderMeetingsList(contactId) {
+        const list = document.getElementById('meetings-list');
+        const emptyState = document.getElementById('meetings-empty');
+        if (!list) return;
+
+        list.innerHTML = '';
+        
+        if (!state.meetings) state.meetings = {};
+        if (!state.meetings[contactId]) state.meetings[contactId] = [];
+
+        const meetings = state.meetings[contactId];
+
+        // 处理空状态
+        if (meetings.length === 0) {
+            if (emptyState) emptyState.style.display = 'flex';
+            return;
+        }
+        if (emptyState) emptyState.style.display = 'none';
+
+        // 倒序排列渲染
+        [...meetings].reverse().forEach(meeting => {
+            const item = document.createElement('div');
+            item.className = 'meeting-item';
+            
+            const date = new Date(meeting.time);
+            const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+            
+            // 获取摘要
+            let summary = '暂无内容';
+            if (meeting.content && meeting.content.length > 0) {
+                const lastContent = meeting.content[meeting.content.length - 1];
+                summary = lastContent.text.substring(0, 20) + (lastContent.text.length > 20 ? '...' : '');
+            }
+
+            // HTML 结构：包含一个删除图标
+            item.innerHTML = `
+                <div class="meeting-item-content" style="width: 100%;">
+                    <div class="meeting-item-header">
+                        <span style="font-weight:600; color:#000;">${meeting.title || '未命名见面'}</span>
+                        <span style="font-size: 12px; color: #999;">${timeStr}</span>
+                    </div>
+                    <div class="meeting-item-summary" style="color: #666; font-size: 13px; margin-top: 4px;">${summary}</div>
+                </div>
+                <div class="meeting-delete-btn" title="删除记录">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+            `;
+            
+            // 绑定点击跳转事件 (点击整个卡片)
+            item.addEventListener('click', () => openMeetingDetail(meeting.id));
+
+            // 绑定删除事件 (只点击垃圾桶)
+            const deleteBtn = item.querySelector('.meeting-delete-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止冒泡，防止触发卡片点击
+                deleteMeeting(contactId, meeting.id);
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    // [新增] 删除单条见面记录
+    function deleteMeeting(contactId, meetingId) {
+        if (!confirm('确定要彻底删除这条见面记录吗？删除后无法恢复。')) return;
+
+        const meetings = state.meetings[contactId];
+        // 过滤掉要删除的这条
+        state.meetings[contactId] = meetings.filter(m => m.id !== meetingId);
+        
+        saveConfig(); // 保存到本地存储
+        renderMeetingsList(contactId); // 重新渲染列表
+    }
+
+
+    // 3. 新建见面
+    function createNewMeeting() {
+        if (!state.currentChatContactId) return;
+        
+        const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        const newId = Date.now();
+        
+        // 获取当前已有见面次数，生成标题
+        const count = (state.meetings[state.currentChatContactId]?.length || 0) + 1;
+        
+        const newMeeting = {
+            id: newId,
+            time: Date.now(),
+            title: `第 ${count} 次见面`,
+            content: [], // 结构: { role: 'user'|'ai', text: '...' }
+            style: contact.meetingStyle || '正常',
+            isFinished: false
+        };
+
+        if (!state.meetings[state.currentChatContactId]) state.meetings[state.currentChatContactId] = [];
+        state.meetings[state.currentChatContactId].push(newMeeting);
+        
+        saveConfig();
+        
+        // 直接进入详情页
+        openMeetingDetail(newId);
+    }
+
+    // 4. 进入详情页
+    function openMeetingDetail(meetingId) {
+        state.currentMeetingId = meetingId;
+        const meetings = state.meetings[state.currentChatContactId];
+        const meeting = meetings.find(m => m.id === meetingId);
+        
+        if (!meeting) return;
+
+        document.getElementById('meeting-detail-title').textContent = meeting.title;
+        document.getElementById('meeting-detail-screen').classList.remove('hidden');
+        
+        renderMeetingCards(meeting);
+    }
+
+    // 5. 渲染详情页卡片流
+    function renderMeetingCards(meeting) {
+        const container = document.getElementById('meeting-card-container');
+        container.innerHTML = '';
+        
+        const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        
+        meeting.content.forEach((msg, index) => {
+            const card = document.createElement('div');
+            card.className = 'meeting-card';
+            
+            let avatar = '';
+            let name = '';
+            let roleClass = '';
+            
+            if (msg.role === 'user') {
+                avatar = state.userProfile.avatar;
+                name = '我';
+                roleClass = 'meeting-card-role-user';
+            } else {
+                avatar = contact.avatar;
+                name = contact.name; // 使用 AI 人设名
+                roleClass = 'meeting-card-role-ai';
+            }
+
+            card.innerHTML = `
+                <div class="meeting-card-header">
+                    <img src="${avatar}" class="meeting-card-avatar">
+                    <span class="meeting-card-name ${roleClass}">${name}</span>
+                </div>
+                <div class="meeting-card-content">${msg.text}</div>
+                <div class="meeting-card-actions">
+                    <i class="fas fa-pen meeting-action-icon" onclick="window.editMeetingMsg(${index})" title="编辑"></i>
+                    <i class="fas fa-trash meeting-action-icon danger" onclick="window.deleteMeetingMsg(${index})" title="删除"></i>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        
+        // 自动滚动到底部
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 6. 发送剧情文本
+    function handleSendMeetingText() {
+        const input = document.getElementById('meeting-input');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        if (!state.currentMeetingId || !state.currentChatContactId) return;
+
+        const meetings = state.meetings[state.currentChatContactId];
+        const meeting = meetings.find(m => m.id === state.currentMeetingId);
+        
+        if (meeting) {
+            meeting.content.push({
+                role: 'user',
+                text: text
+            });
+            saveConfig();
+            renderMeetingCards(meeting);
+            
+            // 重置输入框
+            input.value = '';
+            input.style.height = 'auto'; 
+        }
+    }
+
+    // 7. 保存文风
+    function saveMeetingStyle() {
+        const style = document.getElementById('meeting-style-input').value.trim();
+        const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        if (contact) {
+            contact.meetingStyle = style;
+            saveConfig();
+            document.getElementById('meeting-style-modal').classList.add('hidden');
+            // 可以加个 Toast 提示
+            // showChatToast('文风已保存');
+        }
+    }
+
+    // 8. 结束见面
+    function endMeeting() {
+        if (!confirm('确定结束这次见面吗？这将保存当前进度并返回聊天界面。')) return;
+        
+        const contactId = state.currentChatContactId;
+        const meetingId = state.currentMeetingId;
+        const meetings = state.meetings[contactId];
+        const meeting = meetings.find(m => m.id === meetingId);
+
+        document.getElementById('meeting-detail-screen').classList.add('hidden');
+        document.getElementById('meetings-screen').classList.add('hidden');
+        
+        state.currentMeetingId = null;
+        renderMeetingsList(contactId); // 刷新列表
+
+        // 询问是否总结见面剧情
+        if (meeting && meeting.content && meeting.content.length > 0) {
+            if (confirm('是否要对本次见面剧情进行总结生成回忆？')) {
+                showNotification('正在总结见面剧情...');
+                generateMeetingSummary(contactId, meeting);
+            }
+        }
+    }
+
+    async function generateMeetingSummary(contactId, meeting) {
+        const contact = state.contacts.find(c => c.id === contactId);
+        if (!contact) {
+            showNotification('联系人不存在', 2000, 'error');
+            return;
+        }
+
+        const settings = state.aiSettings2.url ? state.aiSettings2 : state.aiSettings; // 优先使用副API
+        if (!settings.url || !settings.key) {
+            console.log('未配置API，无法自动总结见面');
+            showNotification('未配置API', 2000, 'error');
+            return;
+        }
+
+        // 提取剧情文本
+        const storyText = meeting.content.map(m => {
+            const role = m.role === 'user' ? '用户' : contact.name;
+            return `${role}: ${m.text}`;
+        }).join('\n');
+
+        if (!storyText) {
+            showNotification('见面内容为空', 2000);
+            return;
+        }
+
+        const systemPrompt = `你是一个小说剧情总结助手。
+请阅读以下一段角色扮演的剧情对话，并生成一段简练的剧情摘要。
+摘要应该是陈述句，概括发生了什么主要事件。
+不要包含“剧情显示”、“用户说”等前缀，直接陈述事实。
+请将摘要控制在 100 字以内。`;
+
+        try {
+            let fetchUrl = settings.url;
+            if (!fetchUrl.endsWith('/chat/completions')) {
+                fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'chat/completions' : fetchUrl + '/chat/completions';
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${settings.key}`
+                },
+                body: JSON.stringify({
+                    model: settings.model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: storyText }
+                    ],
+                    temperature: 0.5
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            let summary = data.choices[0].message.content.trim();
+            
+            if (summary) {
+                // 添加到记忆
+                state.memories.push({
+                    id: Date.now(),
+                    contactId: contact.id,
+                    content: `【见面回忆】(${meeting.title}) ${summary}`,
+                    time: Date.now(),
+                    range: '见面剧情'
+                });
+                saveConfig();
+                
+                console.log('见面剧情总结完成:', summary);
+                showNotification('见面总结完成', 2000, 'success');
+            } else {
+                showNotification('未生成有效总结', 2000);
+            }
+
+        } catch (error) {
+            console.error('见面总结失败:', error);
+            showNotification('总结出错', 2000, 'error');
+        }
+    }
+
+    // 9. 全局工具函数：编辑和删除剧情
+    window.deleteMeetingMsg = function(index) {
+        if (!confirm('确定删除这段剧情？')) return;
+        if (!state.currentChatContactId || !state.currentMeetingId) return;
+
+        const meeting = state.meetings[state.currentChatContactId].find(m => m.id === state.currentMeetingId);
+        if (meeting) {
+            meeting.content.splice(index, 1);
+            saveConfig();
+            renderMeetingCards(meeting);
+        }
+    }
+
+    window.editMeetingMsg = function(index) {
+        if (!state.currentChatContactId || !state.currentMeetingId) return;
+
+        const meeting = state.meetings[state.currentChatContactId].find(m => m.id === state.currentMeetingId);
+        if (meeting) {
+            const newText = prompt('编辑内容:', meeting.content[index].text);
+            if (newText !== null && newText.trim() !== '') {
+                meeting.content[index].text = newText.trim();
+                saveConfig();
+                renderMeetingCards(meeting);
+            }
+        }
+    }
+
+    // ============================================================
+    // 见面功能核心逻辑 (确保这段代码在 script.js 底部)
+    // ============================================================
+
+    window.openMeetingsScreen = function(contactId) {
+        if (!contactId) {
+            console.error("未指定联系人ID");
+            return;
+        }
+        
+        const contact = state.contacts.find(c => c.id === contactId);
+        if (!contact) return;
+
+        console.log("正在打开见面列表，联系人:", contact.name);
+
+        // 1. 隐藏资料卡
+        const profileScreen = document.getElementById('ai-profile-screen');
+        if (profileScreen) profileScreen.classList.add('hidden');
+
+        // 2. 显示见面列表页
+        const meetingsScreen = document.getElementById('meetings-screen');
+        if (meetingsScreen) {
+            meetingsScreen.classList.remove('hidden');
+            renderMeetingsList(contactId);
+        } else {
+            alert("错误：HTML中缺少 id='meetings-screen' 元素");
+        }
+    };
+
+    // ... (确保 renderMeetingsList 等其他函数也在下面) ...
+    // ==========================================
+    // [第四步核心] AI 剧情生成逻辑 (含回车支持)
+    // ==========================================
+
+    // 1. 监听回车键 (放在这里或者 setupEventListeners 里都可以)
+    // 确保输入框存在时才绑定
+    const meetingInputEl = document.getElementById('meeting-input');
+    if (meetingInputEl) {
+        // 移除旧的以防重复 (cloneNode法在这里不太好用因为是 textarea，直接用 addEventListener)
+        // 简单处理：每次渲染详情页时其实应该绑定一次，但这里我们先放全局试试
+        meetingInputEl.addEventListener('keydown', function(e) {
+            // 如果按下了 Enter 且没有按 Shift (允许 Shift+Enter 换行)
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // 阻止默认的换行行为
+                handleSendMeetingText(); // 触发发送
+            }
+        });
+    }
+
+    /**
+     * 2. 构造见面模式的专用 Prompt
+     */
+    function constructMeetingPrompt(contactId, newUserInput) {
+        const contact = state.contacts.find(c => c.id === contactId);
+        const meetingId = state.currentMeetingId;
+        const meetings = state.meetings[contactId];
+        const currentMeeting = meetings.find(m => m.id === meetingId);
+        
+        // 获取线上聊天上下文
+        let chatContext = '';
+        const chatHistory = state.chatHistory[contactId] || [];
+        if (chatHistory.length > 0) {
+            // 取最近 15 条聊天记录
+            const recentChats = chatHistory.slice(-15);
+            chatContext = recentChats.map(msg => {
+                const role = msg.role === 'user' ? '用户' : contact.name;
+                let content = msg.content;
+                if (msg.type === 'image') content = '[图片]';
+                else if (msg.type === 'sticker') content = '[表情包]';
+                return `${role}: ${content}`;
+            }).join('\n');
+        }
+
+        // 基础设定
+        let prompt = `你现在是一个小说家，正在进行一场角色扮演描写。\n`;
+        prompt += `角色：${contact.name}。\n`;
+        prompt += `人设：${contact.persona || '无特定人设'}。\n`; // 修正：使用 persona 字段
+        prompt += `当前场景/文风/地点：${currentMeeting.style || '默认场景'}。\n\n`;
+        
+        if (chatContext) {
+            prompt += `【线上聊天背景】(你们之前的聊天记录，供参考)\n${chatContext}\n\n`;
+        }
+
+        prompt += `【规则】\n`;
+        prompt += `1. 请以第三人称视角描写，重点描写${contact.name}的神态、动作、语言以及环境氛围。\n`;
+        prompt += `2. 不要出现"用户："或"AI："这样的剧本格式，直接写正文。\n`;
+        prompt += `3. 沉浸在场景中，不要跳出人设。\n\n`;
+        
+        prompt += `【剧情回顾】\n`;
+        
+        // 拼接历史记录 (最近 10 条)
+        const recentContent = currentMeeting.content.slice(-10);
+        recentContent.forEach(card => {
+            if (card.role === 'user') {
+                prompt += `(用户动作/语言): ${card.text}\n`;
+            } else {
+                prompt += `(剧情发展): ${card.text}\n`;
+            }
+        });
+
+        if (newUserInput) {
+            prompt += `(用户动作/语言): ${newUserInput}\n`;
+        }
+        
+        prompt += `\n请根据以上内容，续写接下来的剧情（描写${contact.name}的反应）：`;
+        
+        return prompt;
+    }
+
+    /**
+     * 3. 执行 AI 请求并流式输出
+     */
+    async function handleMeetingAI(type) {
+        const inputEl = document.getElementById('meeting-input');
+        const userInput = inputEl.value.trim();
+        const contactId = state.currentChatContactId;
+        const meetingId = state.currentMeetingId;
+        const container = document.getElementById('meeting-card-container');
+
+        if (type === 'user' && !userInput) return;
+
+        const meetings = state.meetings[contactId];
+        const meeting = meetings.find(m => m.id === meetingId);
+        if (!meeting) return;
+
+        // 1. 用户发送上屏 (如果是用户触发)
+        if (type === 'user') {
+            meeting.content.push({
+                role: 'user',
+                text: userInput
+            });
+            saveConfig();
+            renderMeetingCards(meeting); // 重绘显示用户消息
+            inputEl.value = ''; 
+            inputEl.style.height = 'auto';
+        }
+
+        // 2. UI 准备：添加一个临时的 AI 卡片
+        const aiCard = document.createElement('div');
+        aiCard.className = 'meeting-card';
+        // 获取 AI 头像和名字
+        const contact = state.contacts.find(c => c.id === contactId);
+        const avatar = contact.avatar;
+        const name = contact.name;
+        
+        aiCard.innerHTML = `
+            <div class="meeting-card-header">
+                <img src="${avatar}" class="meeting-card-avatar">
+                <span class="meeting-card-name meeting-card-role-ai">${name}</span>
+            </div>
+            <div class="meeting-card-content loading-dots">...</div>
+            <div class="meeting-card-actions">
+                <!-- 占位，生成完再显示操作按钮 -->
+            </div>
+        `;
+        container.appendChild(aiCard);
+        
+        // 滚动到底部
+        container.scrollTop = container.scrollHeight;
+
+        // 锁定按钮
+        const continueBtn = document.getElementById('meeting-ai-continue-btn');
+        if(continueBtn) continueBtn.disabled = true;
+        inputEl.disabled = true; 
+
+        try {
+            const settings = state.aiSettings.url ? state.aiSettings : state.aiSettings2;
+            if (!settings.url || !settings.key) {
+                throw new Error("请先在设置中配置 AI API");
+            }
+
+            const fullPrompt = constructMeetingPrompt(contactId, type === 'user' ? userInput : null);
+            
+            let fetchUrl = settings.url;
+            if (!fetchUrl.endsWith('/chat/completions')) {
+                fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'chat/completions' : fetchUrl + '/chat/completions';
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${settings.key}`
+                },
+                body: JSON.stringify({
+                    model: settings.model,
+                    messages: [
+                        { role: 'user', content: fullPrompt }
+                    ],
+                    temperature: 0.7,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) throw new Error(response.statusText);
+
+            const data = await response.json();
+            const finalTezt = data.choices[0].message.content.trim();
+            
+            const contentEl = aiCard.querySelector('.meeting-card-content');
+            
+            // 移除 loading 样式并显示内容
+            contentEl.classList.remove('loading-dots');
+            contentEl.innerText = finalTezt;
+            
+            // 保存
+            meeting.content.push({
+                role: 'ai',
+                text: finalTezt
+            });
+            saveConfig();
+            
+            // 重新渲染以确保状态一致（添加操作按钮等）
+            renderMeetingCards(meeting); 
+
+        } catch (error) {
+            console.error(error);
+            const contentEl = aiCard.querySelector('.meeting-card-content');
+            contentEl.classList.remove('loading-dots');
+            contentEl.innerHTML = `<span style="color:red">生成失败: ${error.message}</span>`;
+        } finally {
+            if(continueBtn) continueBtn.disabled = false;
+            inputEl.disabled = false;
+            inputEl.focus(); 
+        }
+    }
+// ==========================================
+// [终极修复] 全局监听回车键 (放在文件最末尾)
+// ==========================================
+document.body.addEventListener('keydown', function(e) {
+    // 1. 检查当前按键的目标是不是我们的输入框
+    if (e.target && e.target.id === 'meeting-input') {
+        
+        // 2. 检查是不是 Enter 键 (且没有按 Shift)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // 阻止换行
+            
+            console.log("捕捉到回车键，准备发送..."); // 用于调试
+
+            // 3. 触发发送逻辑
+            if (typeof handleSendMeetingText === 'function') {
+                handleSendMeetingText();
+            } else {
+                alert("错误：找不到 handleSendMeetingText 函数，请检查代码是否完整。");
+            }
+        }
+    }
+});
+// ================= 见面字体隔离专用函数 =================
+
+// 1. 应用见面字体 (只修改 --meeting-font-family)
+function applyMeetingFont(fontName) {
+    if (fontName === 'default') {
+        document.documentElement.style.setProperty('--meeting-font-family', 'var(--font-family)');
+    } else {
+        const font = state.fonts.find(f => f.name === fontName);
+        if (font) {
+            // 如果是网络字体，确保样式标签存在
+            if (font.type === 'url' && !document.getElementById(`style-${font.name}`)) {
+                const style = document.createElement('style');
+                style.id = `style-${font.name}`;
+                style.textContent = `@font-face { font-family: '${font.name}'; src: url('${font.source}'); }`;
+                document.head.appendChild(style);
+            }
+            // 关键：只修改见面变量
+            document.documentElement.style.setProperty('--meeting-font-family', fontName);
+        }
+    }
+}
+
+// 2. 处理见面字体上传 (不调用 addFontToState，避免修改全局)
+function handleMeetingFontUploadAction(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const fontName = `MeetingFont_${Date.now()}`;
+        const fontFace = new FontFace(fontName, `url(${event.target.result})`);
+        
+        fontFace.load().then((loadedFace) => {
+            document.fonts.add(loadedFace);
+            
+            // 存入字体列表（为了能被保存），但不切换全局当前字体
+            state.fonts.push({ name: fontName, source: event.target.result, type: 'local' });
+            
+            // 仅切换见面字体
+            state.currentMeetingFont = fontName;
+            applyMeetingFont(fontName);
+            saveConfig();
+            
+            alert('字体已应用到见面详情页');
+        }).catch(err => {
+            console.error('字体加载失败:', err);
+            alert('字体文件无效');
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+}
+
+// 3. 处理见面预设选择
+function handleApplyMeetingFontPreset(e) {
+    const name = e.target.value;
+    if (!name) return;
+    
+    const preset = state.fontPresets.find(p => p.name === name);
+    if (preset) {
+        state.currentMeetingFont = preset.font;
+        applyMeetingFont(preset.font);
+        saveConfig();
+    }
+}
+
+// 4. 重置见面字体
+function resetMeetingFontAction() {
+    state.currentMeetingFont = 'default';
+    applyMeetingFont('default');
+    saveConfig();
+    alert('见面字体已重置为跟随系统');
+}
+
+});
