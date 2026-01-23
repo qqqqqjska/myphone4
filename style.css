@@ -304,8 +304,8 @@ body {
 }
 
 .vinyl-disk {
-    width: 120px;
-    height: 120px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: radial-gradient(circle, #111 0%, #333 100%);
     /* 黑胶纹理 */
@@ -320,6 +320,7 @@ body {
     justify-content: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     position: relative;
+  
 }
 
 /* 旋转动画 */
@@ -3674,7 +3675,7 @@ input.msg-select-checkbox {
 
 /* --- 适配旧组件到网格中 --- */
 /* ============================================================
-   全新的主屏幕网格与组件系统 (请替换 style.css 底部所有旧代码)
+   全新的主屏幕网格与组件系统 (修复版：方形网格 & 文字下方)
    ============================================================ */
 
 /* --- 1. 隐藏的原生组件仓库 --- */
@@ -3683,80 +3684,118 @@ input.msg-select-checkbox {
 }
 
 /* --- 2. 主屏幕网格容器 --- */
+/* --- style.css --- */
+
 .home-screen-grid {
     display: grid;
-    /* 4列，每列等宽 */
     grid-template-columns: repeat(4, 1fr);
-    /* 6行，每行高度固定80px，间距自适应 */
-    grid-template-rows: repeat(6, 85px); 
-    gap: 20px 15px; /* 行间距25px，列间距15px */
-    padding: 70px 20px 80px 20px; /* 顶部留白60px避开灵动岛，底部留白给 Dock */
+    
+    /* === 修改这里 === */
+    /* 原来是: grid-auto-rows: min-content; */
+    /* 改为固定 60px，这是 App 图标的标准高度 */
+    grid-auto-rows: 60px; 
+    /* ================ */
+    
+    gap: 40px 20px; 
+    justify-items: center; 
+    padding: 70px 20px 100px 20px;
     width: 100%;
     box-sizing: border-box;
     position: relative;
-    align-content: start; /* 内容靠上对齐 */
+    align-content: start; 
 }
+
 
 /* --- 3. 格子 (Slot) 样式 --- */
 .grid-slot {
     position: relative;
-    border-radius: 18px;
+    /* 【核心修改】普通格子锁死大小，刚好包住图标 */
+    width: 60px;
+    height: 60px;
+    /* 既然宽高都定死了，这就是完美的正方形 */
+    aspect-ratio: 1 / 1; 
+    border-radius: 14px; /* 贴合图标圆角 */
     transition: all 0.2s;
-    /* 默认是透明的 */
+    overflow: visible; /* 允许文字溢出显示 */
+    z-index: 1;
 }
 
-/* 编辑模式下：显示虚线框，提示用户哪里是格子 */
+/* 【关键逻辑】小组件格子：必须打破 60px 的限制，撑满它跨越的区域 */
+.grid-slot.widget-slot {
+    width: 100% !important;  /* 宽度填满跨越的列 */
+    height: 100% !important; /* 高度填满跨越的行 */
+    aspect-ratio: auto !important; /* 取消正方形比例限制 */
+    justify-self: stretch; /* 强制水平拉伸 */
+    min-height: 0;
+    display: flex;
+}
+
+/* 编辑模式下：显示虚线框 (现在虚线框会紧贴图标了) */
 .edit-mode .grid-slot {
-    background-color: rgba(255, 255, 255, 0.15);
-    border: 1px dashed rgba(0, 0, 0, 0.15);
+    /* 稍微调整背景色，让它看起来像个占位符 */
+    background-color: rgba(200, 200, 200, 0.3);
+    border: 1px dashed rgba(0, 0, 0, 0.3);
+    overflow: visible; 
 }
 
-/* 拖拽吸附预览：当拖拽经过时变成蓝色高亮 */
+/* 拖拽吸附预览 */
 .grid-slot.drag-preview {
     background-color: rgba(0, 122, 255, 0.2) !important;
     border: 2px solid #007AFF !important;
     box-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
-    z-index: 5; /* 确保高亮显示在最上层 */
-    border-radius: 18px;
+    z-index: 5;
+    border-radius: 14px;
 }
+
+
 
 /* --- 4. 格子里的内容 (App图标 & 组件) --- */
 
-/* App 图标容器 */
+/* App 图标容器 - 在格子内居中 */
 .draggable-item {
-    width: 60px;
-    height: 80px; 
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: center; /* 让小图标在格子里垂直居中 */
     position: relative;
     margin: auto;
     z-index: 10;
 }
 
+/* 图标图片部分 - 【关键修改】恢复固定大小 60px */
 .app-icon-img {
-    width: 60px;
-    height: 60px;
-    border-radius: 14px;
+    width: 60px;  /* 恢复标准大小 */
+    height: 60px; /* 恢复标准大小 */
+    border-radius: 14px; /* 恢复原来的圆角 */
     background-color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 28px; /* 恢复原来的图标字号 */
     box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    flex-shrink: 0; /* 防止被挤压 */
 }
 
+/* 应用名字 - 移到格子下方 */
 .app-name {
-    font-size: 12px;
-    color: #333; /* 深色文字更清晰 */
-    margin-top: 5px;
+    position: absolute;
+    /* 定位到格子底部边缘再往下一点 */
+    top: calc(100% + 1px); 
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #333; 
     font-weight: 500;
-    pointer-events: none; /* 防止文字干扰拖拽 */
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+    pointer-events: none; 
+    white-space: nowrap;
+    width: 150%; /* 允许文字比格子宽 */
+    text-align: center;
+    z-index: 20;
 }
 
-/* 自定义 JSON 组件容器 */
+/* 自定义 JSON 组件容器 - 填满格子 (组件依然需要填满) */
 .custom-widget {
     width: 100%;
     height: 100%;
@@ -3766,7 +3805,7 @@ input.msg-select-checkbox {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-/* 强制修复：让原生组件（音乐/拍立得）在格子里填满并显示 */
+/* 修复原生组件在网格中的显示 */
 .widget-slot .music-widget,
 .widget-slot .polaroid-widget {
     margin: 0 !important;
@@ -3778,8 +3817,25 @@ input.msg-select-checkbox {
     top: auto !important;
     left: auto !important;
     display: flex !important;
-    box-shadow: none !important; /* 避免双重阴影 */
+    box-shadow: none !important; 
+    border-radius: 18px !important;
 }
+
+/* 针对音乐组件的特殊微调 */
+.widget-slot .music-widget .vinyl-wrapper {
+    width: 45%; 
+    height: auto;
+    aspect-ratio: 1/1;
+    margin-right: 5%;
+}
+.widget-slot .music-widget .vinyl-disk {
+    width: 100%;
+    height: 100%;
+}
+.widget-slot .music-widget .music-info {
+    font-size: 0.9em; 
+}
+
 
 /* --- 5. 编辑模式动画 (抖动) --- */
 @keyframes shake {
@@ -3795,7 +3851,7 @@ input.msg-select-checkbox {
 .edit-mode .music-widget,
 .edit-mode .polaroid-widget {
     cursor: grab;
-    animation: shake 0.25s infinite linear; /* 抖动动画 */
+    animation: shake 0.25s infinite linear; 
 }
 
 .edit-mode .draggable-item:active,
@@ -3810,10 +3866,10 @@ input.msg-select-checkbox {
     left: -8px;
     width: 24px;
     height: 24px;
-    background: rgba(180, 180, 180, 0.95); /* 浅灰色背景 */
+    background: rgba(180, 180, 180, 0.95); 
     color: white; 
     border-radius: 50%;
-    display: none; /* 默认隐藏 */
+    display: none; 
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -3824,14 +3880,12 @@ input.msg-select-checkbox {
     font-family: sans-serif;
 }
 
-/* 减号图标 */
 .delete-btn::before {
     content: "−"; 
     font-weight: bold;
     margin-top: -2px;
 }
 
-/* 仅在编辑模式下显示删除按钮，并带有弹出动画 */
 .edit-mode .delete-btn {
     display: flex;
     animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -3845,7 +3899,7 @@ input.msg-select-checkbox {
 /* --- 7. 编辑模式底部工具栏 --- */
 #edit-mode-toolbar {
     position: absolute;
-    bottom: 110px; /* 在 Dock 上方 */
+    bottom: 110px; 
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.9);
@@ -3861,21 +3915,21 @@ input.msg-select-checkbox {
 /* --- 8. 小组件库弹窗样式 --- */
 .widget-library-modal {
     position: fixed;
-    bottom: -100%; /* 默认隐藏在屏幕下方 */
+    bottom: -100%; 
     left: 0;
     width: 100%;
-    height: 80vh; /* 占屏幕高度 80% */
+    height: 80vh; 
     background: #f2f2f7;
     border-radius: 20px 20px 0 0;
     z-index: 999;
-    transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* 平滑滑出 */
+    transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); 
     display: flex;
     flex-direction: column;
     box-shadow: 0 -5px 30px rgba(0,0,0,0.2);
 }
 
 .widget-library-modal.show {
-    bottom: 0; /* 显示 */
+    bottom: 0; 
 }
 
 .library-header {
@@ -3909,7 +3963,6 @@ input.msg-select-checkbox {
     gap: 15px;
     overflow-x: auto;
     padding-bottom: 10px;
-    /* 隐藏滚动条 */
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -3917,7 +3970,6 @@ input.msg-select-checkbox {
     display: none; 
 }
 
-/* 库里的组件预览卡片 */
 .library-item {
     flex: 0 0 auto;
     background: transparent;
@@ -3939,7 +3991,7 @@ input.msg-select-checkbox {
     overflow: hidden;
     position: relative;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    pointer-events: none; /* 让点击穿透 */
+    pointer-events: none; 
 }
 
 /* 预览框尺寸 */

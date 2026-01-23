@@ -8606,7 +8606,7 @@ function renderItems() {
     slots.forEach(slot => {
         slot.innerHTML = '';
         slot.className = 'grid-slot'; 
-        slot.style.display = 'block'; // 默认显示
+        slot.style.display = 'block'; 
         slot.style.gridColumn = 'auto';
         slot.style.gridRow = 'auto';
         slot.removeAttribute('style');
@@ -8622,7 +8622,6 @@ function renderItems() {
         if (item.size && item.size !== '1x1') {
             const occupied = getOccupiedSlots(item.index, item.size);
             if (occupied) {
-                // 除了起始位置，其他被占用的都要隐藏
                 occupied.forEach(id => {
                     if (id !== item.index) coveredIndices.push(id);
                 });
@@ -8630,7 +8629,7 @@ function renderItems() {
         }
     });
 
-    // 6. 隐藏格子 (修复网格错乱的关键)
+    // 6. 隐藏格子
     coveredIndices.forEach(id => {
         if (slots[id]) slots[id].style.display = 'none';
     });
@@ -8640,7 +8639,6 @@ function renderItems() {
         const slot = slots[item.index];
         if (!slot) return;
 
-        // 只有编辑模式下才允许拖拽
         const canDrag = isEditMode;
 
         // A. DOM 组件 (音乐/拍立得)
@@ -8648,16 +8646,10 @@ function renderItems() {
             const domEl = document.getElementById(item.elementId);
             if (domEl) {
                 applyWidgetSize(slot, item.size);
-                slot.classList.add('widget-slot');
+                slot.classList.add('widget-slot'); // 这里有加 widget-slot
                 slot.appendChild(domEl);
-                
-                // 设置拖拽
                 domEl.setAttribute('draggable', canDrag);
                 domEl.ondragstart = (e) => handleDragStart(e, item);
-                
-                // 【修复：移除了禁止鼠标事件的代码，现在可以拖拽了】
-                
-                // 添加删除按钮
                 if (isEditMode) addDeleteButton(slot, item);
             }
         }
@@ -8669,15 +8661,22 @@ function renderItems() {
             if (isEditMode) addDeleteButton(slot, item);
         }
         
-        // C. JSON 组件
+        // C. JSON 组件 (这里是修复点)
         else if (item.type === 'custom-json-widget') {
             const widgetEl = createCustomJsonWidget(item, canDrag);
             applyWidgetSize(slot, item.size);
+            
+            // =========== 【修复开始】 ===========
+            // 必须加上这个类，否则组件会被挤压在 60x60 的格子里
+            slot.classList.add('widget-slot'); 
+            // =========== 【修复结束】 ===========
+            
             slot.appendChild(widgetEl);
             if (isEditMode) addDeleteButton(slot, item);
         }
     });
 }
+
 
 // --- 3. 辅助创建函数 ---
 
@@ -8728,30 +8727,106 @@ function createAppElement(item, draggable) {
 }
 
 
+// --- 替换原有的 createCustomJsonWidget 函数 ---
+
 function createCustomJsonWidget(item, draggable) {
     const div = document.createElement('div');
     div.classList.add('custom-widget');
     div.setAttribute('draggable', draggable);
     
+    // 确保这里有 height: 100%
+    div.style.width = '100%';
+    div.style.height = '100%'; 
+    
+    // ... 后面的代码 ...
+
+    
     const content = document.createElement('div');
     content.style.width = '100%'; content.style.height = '100%'; 
     content.style.borderRadius = '18px'; content.style.overflow = 'hidden';
-    if(isEditMode) content.style.pointerEvents = 'none'; 
+    
+    // 注意：移除 pointerEvents = 'none'，否则无法点击组件内的上传按钮
+    // 如果需要拖拽，可以只在图片区域禁止事件，或者依靠 grid 的拖拽手柄
+    // 这里为了功能可用性，允许交互
+    if(isEditMode) {
+        content.style.pointerEvents = 'none'; 
+    } else {
+        content.style.pointerEvents = 'auto';
+    }
 
     if (item.css) {
         const style = document.createElement('style');
         style.textContent = item.css;
         content.appendChild(style);
     }
+    
     const htmlDiv = document.createElement('div');
+    // 使用保存的 HTML (如果有状态变更，这里会加载变更后的 HTML)
     htmlDiv.innerHTML = item.html;
     htmlDiv.style.height = '100%';
+    
+    // --- 新增：核心修复逻辑 ---
+    // 自动绑定组件内部的文件输入框，实现图片持久化
+    const fileInputs = htmlDiv.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        // 防止点击穿透触发拖拽或其他行为
+        input.addEventListener('click', (e) => e.stopPropagation());
+        
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 使用现有的压缩工具
+            compressImage(file, 600, 0.7).then(base64 => {
+                // 1. 尝试寻找目标图片元素 (优先查找 data-target 属性，其次找前一个 img)
+                let targetImg = null;
+                if (input.dataset.target) {
+                    targetImg = htmlDiv.querySelector('#' + input.dataset.target);
+                }
+                if (!targetImg) {
+                    // 尝试找输入框之前的 img 兄弟元素
+                    let sibling = input.previousElementSibling;
+                    while(sibling) {
+                        if (sibling.tagName === 'IMG') {
+                            targetImg = sibling;
+                            break;
+                        }
+                        sibling = sibling.previousElementSibling;
+                    }
+                }
+                // 最后的兜底：找组件内第一个 img
+                if (!targetImg) targetImg = htmlDiv.querySelector('img');
+
+                if (targetImg) {
+                    targetImg.src = base64; // 更新视图
+                    
+                    // 2. 【关键】将更新后的 HTML 写回 item 数据对象
+                    // 这样下次 saveLayout 时就会保存带图片的 HTML
+                    // 注意：由于 file input 的 value 无法设置，我们主要保存 img 的 src
+                    item.html = htmlDiv.innerHTML;
+                    
+                    // 3. 立即触发保存
+                    saveLayout();
+                }
+            }).catch(err => console.error("Widget image save failed", err));
+        });
+    });
+
+    // 监听可编辑文本的变化 (如果有 contenteditable 元素)
+    htmlDiv.addEventListener('input', () => {
+        item.html = htmlDiv.innerHTML;
+    });
+    // 失去焦点时保存
+    htmlDiv.addEventListener('blur', () => saveLayout(), true);
+    // ---------------------------
+
     content.appendChild(htmlDiv);
     div.appendChild(content);
 
     div.addEventListener('dragstart', (e) => handleDragStart(e, item));
     return div;
 }
+
 
 function addDeleteButton(slot, item) {
     const btn = document.createElement('div');
@@ -8944,34 +9019,42 @@ function loadLayout() {
 
 // --- 7. 组件库界面 ---
 
+// --- 替换原有的 renderLibrary 函数 ---
+
 function renderLibrary() {
     const sysRow = document.getElementById('lib-system-row');
     const custRow = document.getElementById('lib-custom-row');
     
     sysRow.innerHTML = '';
     systemWidgets.forEach(widget => {
-        sysRow.appendChild(createLibraryItem(widget));
+        // 系统组件不传 index，不可删除
+        sysRow.appendChild(createLibraryItem(widget, false));
     });
 
     custRow.innerHTML = '';
     if (importedWidgets.length === 0) {
         custRow.innerHTML = '<div style="color:#888; padding:10px;">暂无导入</div>';
     } else {
-        importedWidgets.forEach(widget => {
-            custRow.appendChild(createLibraryItem(widget));
+        importedWidgets.forEach((widget, index) => {
+            // 传入 index 和 true (isCustom)
+            custRow.appendChild(createLibraryItem(widget, true, index));
         });
     }
 }
 
-function createLibraryItem(widget) {
+// --- 替换原有的 createLibraryItem 函数 ---
+
+function createLibraryItem(widget, isCustom = false, index = null) {
     const el = document.createElement('div');
     el.className = 'library-item';
+    el.style.position = 'relative'; // 为了定位删除按钮
     
     let previewHtml = '';
     if (widget.type === 'dom-element') {
         previewHtml = `<div style="width:100%; height:100%; background:${widget.previewColor || '#ccc'}; display:flex; align-items:center; justify-content:center; color:white; font-size:24px;"><i class="fas fa-cube"></i></div>`;
     } else {
-        previewHtml = `<div style="transform:scale(0.5); transform-origin:top left; width:200%; height:200%;">${widget.html}</div>`;
+        // 对于自定义组件，预览缩放显示
+        previewHtml = `<div style="transform:scale(0.5); transform-origin:top left; width:200%; height:200%; overflow:hidden;">${widget.html}</div>`;
         if(widget.css) previewHtml = `<style>${widget.css}</style>` + previewHtml;
     }
 
@@ -8981,14 +9064,79 @@ function createLibraryItem(widget) {
         </div>
         <div class="library-item-name">${widget.name}</div>
     `;
-    el.onclick = () => addToScreen(widget);
+
+    // 点击添加到屏幕
+    el.onclick = (e) => {
+        // 如果点击的是删除按钮，不触发添加
+        if (e.target.closest('.lib-delete-btn')) return;
+        addToScreen(widget);
+    };
+
+    // --- 新增：如果是自定义组件，添加删除按钮 ---
+    if (isCustom && index !== null) {
+        const delBtn = document.createElement('div');
+        delBtn.className = 'lib-delete-btn';
+        delBtn.innerHTML = '&times;';
+        // 简单的内联样式，你也可以写在 CSS 里
+        delBtn.style.cssText = `
+            position: absolute;
+            top: 0px;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 59, 48, 0.9);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 10;
+        `;
+        
+        delBtn.onclick = (e) => {
+            e.stopPropagation(); // 阻止冒泡
+            deleteImportedWidget(index);
+        };
+        el.appendChild(delBtn);
+    }
+
     return el;
 }
 
-function applyWidgetSize(slot, size) {
-    if (size === '4x2') { slot.style.gridColumn = 'span 4'; slot.style.gridRow = 'span 2'; }
-    else if (size === '2x2') { slot.style.gridColumn = 'span 2'; slot.style.gridRow = 'span 2'; }
+// --- 新增：删除组件的函数 ---
+function deleteImportedWidget(index) {
+    if (confirm('确定要从库中删除此组件吗？')) {
+        importedWidgets.splice(index, 1);
+        // 保存更新后的库
+        localStorage.setItem('myIOS_Library', JSON.stringify(importedWidgets));
+        // 重新渲染
+        renderLibrary();
+    }
 }
+
+
+/* --- script.js --- */
+
+function applyWidgetSize(slot, size) {
+    if (size === '4x2') { 
+        slot.style.gridColumn = 'span 4'; 
+        slot.style.gridRow = 'span 2';
+        // 强制高度：(60px * 2) + 30px gap = 150px
+        slot.style.height = '150px'; 
+    }
+    else if (size === '2x2') { 
+        slot.style.gridColumn = 'span 2'; 
+        slot.style.gridRow = 'span 2'; 
+        // 强制高度
+        slot.style.height = '150px';
+    }
+    // 普通 1x1 不需要处理，默认为 60px
+}
+
 
 // 事件绑定
 document.getElementById('add-widget-btn').onclick = () => {
