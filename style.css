@@ -4003,3 +4003,145 @@ input.msg-select-checkbox {
     font-weight: 500;
     color: #333;
 }
+/* ================================================================= */
+/* [核弹级修复 v3] 强制覆盖 - 语音消息样式 */
+/* 使用 html body 前缀极大提高优先级，确保覆盖原有蓝色气泡样式 */
+/* ================================================================= */
+
+/* 1. 彻底清除父容器的背景、边框、阴影、内边距 */
+html body .chat-message .message-content.voice-msg,
+html body .chat-message.user .message-content.voice-msg,
+html body .chat-message.other .message-content.voice-msg {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    
+    /* 强制去除内边距，防止“大蓝气泡”残留 */
+    padding: 0 !important;
+    margin: 0 !important;
+    
+    /* 布局：垂直排列 */
+    display: flex !important;
+    flex-direction: column !important;
+    
+    /* 尺寸控制：防止被撑开 */
+    width: fit-content !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+}
+
+/* 对齐控制 */
+html body .chat-message.other .message-content.voice-msg {
+    align-items: flex-start !important;
+}
+html body .chat-message.user .message-content.voice-msg {
+    align-items: flex-end !important;
+}
+
+/* 2. 语音条 (顶部绿色/白色条) */
+html body .voice-bar-top {
+    display: flex !important;
+    align-items: center !important;
+    height: 36px !important;     /* 固定高度 */
+    line-height: 40px !important;
+    min-width: 80px !important;
+    padding: 0 12px !important;
+    border-radius: 18px !important;
+    position: relative !important;
+    z-index: 10 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    margin-bottom: 0 !important;
+    cursor: pointer;
+    flex: none !important; /* 防止被拉伸 */
+}
+
+/* 对方发的消息 (左侧白条) */
+html body .chat-message.other .voice-bar-top {
+    background-color: #ffffff !important;
+    color: #000 !important;
+}
+/* 对方箭头 */
+html body .chat-message.other .voice-bar-top::before {
+    content: "";
+    position: absolute;
+    left: -6px; top: 13px;
+    border-width: 6px 8px 6px 0;
+    border-style: solid;
+    border-color: transparent #ffffff transparent transparent;
+}
+
+/* 我发的消息 (右侧绿条) */
+html body .chat-message.user .voice-bar-top {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    flex-direction: row-reverse !important;
+}
+/* 我方箭头 */
+html body .chat-message.user .voice-bar-top::after {
+    content: "";
+    position: absolute;
+    right: -6px; top: 13px;
+    border-width: 6px 0 6px 8px;
+    border-style: solid;
+    border-color: transparent #000000 transparent transparent;
+}
+
+/* 3. 转文字气泡 (底部白色方块) - 彻底修复高度问题 */
+html body .voice-text-bottom {
+    display: block !important;
+    position: relative !important;
+    background-color: #ffffff !important;
+    color: #333 !important;
+    
+    /* 间距与尺寸 */
+    margin-top: 6px !important;    /* 与语音条的距离 */
+    padding: 8px 10px !important;  /* 紧凑内边距 */
+    border-radius: 6px !important;
+    
+    /* 字体排版 */
+    font-size: 14px !important;
+    line-height: 1.4 !important;   /* 防止行高撑开 */
+    text-align: left !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    
+    /* 关键：防止被父容器拉伸 */
+    flex: none !important; 
+    width: fit-content !important;
+    max-width: 240px !important; /* 限制最大宽度 */
+    height: auto !important;
+    min-height: 0 !important;
+    
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    z-index: 9 !important;
+}
+
+/* 隐藏时彻底消失 */
+html body .voice-text-bottom.hidden {
+    display: none !important;
+}
+
+/* 文字气泡的小三角 */
+html body .voice-text-bottom::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent #ffffff transparent;
+}
+html body .chat-message.other .voice-text-bottom::before { left: 12px; }
+html body .chat-message.user .voice-text-bottom::before { right: 12px; }
+
+/* 图标微调 */
+html body .voice-icon-box {
+    width: 20px;
+    text-align: center;
+}
+html body .chat-message.other .voice-icon-box i { transform: rotate(90deg); }
+html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }

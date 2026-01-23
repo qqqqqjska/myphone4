@@ -736,6 +736,46 @@
                     </div>
                 </div>
             </div>
+        <!-- 发送语音弹窗 -->
+        <div id="voice-input-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>发送语音</h3>
+                    <button class="close-btn" id="close-voice-input">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- 顶部切换 -->
+                    <div class="chat-settings-nav" style="margin: 0 0 20px 0;">
+                        <div class="nav-item active" id="tab-voice-fake" onclick="switchVoiceTab('fake')">文字转语音</div>
+                        <div class="nav-item" id="tab-voice-real" onclick="switchVoiceTab('real')">录制语音</div>
+                        <div class="nav-indicator" id="voice-nav-indicator" style="width: calc(50% - 4px);"></div>
+                    </div>
+
+                    <!-- 模式1: 伪造语音 (输入文字) -->
+                    <div id="voice-mode-fake">
+                        <div class="setting-group">
+                            <label>语音内容 (点击消息后显示)</label>
+                            <textarea id="voice-fake-text" placeholder="输入这段语音对应的文字内容..." style="height: 100px;"></textarea>
+                        </div>
+                        <div class="setting-group">
+                            <label>语音时长: <span id="voice-fake-duration-val">3</span>秒</label>
+                            <input type="range" id="voice-fake-duration" min="1" max="60" value="3" step="1">
+                        </div>
+                        <button id="send-fake-voice-btn" class="ios-btn-block" style="background-color: #07C160;">发送</button>
+                    </div>
+
+                    <!-- 模式2: 真实录音 (Web Speech API) -->
+                    <div id="voice-mode-real" class="hidden" style="text-align: center; padding: 20px 0;">
+                        <div id="voice-recording-status" style="font-size: 18px; margin-bottom: 20px; color: #888;">点击麦克风开始说话</div>
+                        <div id="voice-mic-btn" class="voice-mic-btn">
+                            <i class="fas fa-microphone"></i>
+                        </div>
+                        <div id="voice-real-result" style="margin-top: 20px; font-style: italic; color: #333; min-height: 20px;"></div>
+                        <button id="send-real-voice-btn" class="ios-btn-block" style="background-color: #07C160; margin-top: 20px;" disabled>发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
             <!-- 聊天页面 -->
             <div id="chat-screen" class="sub-screen hidden">
@@ -830,7 +870,7 @@
                         <div class="more-icon"><i class="fas fa-exchange-alt"></i></div>
                         <div class="more-label">转账</div>
                     </div>
-                    <div class="more-item">
+                    <div class="more-item" id="chat-more-voice-btn">
                         <div class="more-icon"><i class="fas fa-microphone"></i></div>
                         <div class="more-label">语音输入</div>
                     </div>
@@ -1880,6 +1920,66 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="script.js"></script>
 
+<!-- 在 index.html 中找到 <!-- 编辑记忆弹窗 --> 附近，添加以下代码 -->
+
+            <!-- 编辑消息弹窗 -->
+            <div id="edit-chat-msg-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>编辑消息</h3>
+                        <button class="close-btn" id="close-edit-chat-msg">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>消息内容</label>
+                            <textarea id="edit-chat-msg-content" placeholder="输入新的消息内容..." style="height: 150px;"></textarea>
+                        </div>
+                        <button id="save-edit-chat-msg-btn" class="ios-btn-block">保存修改</button>
+                    </div>
+                </div>
+            </div>
+<!-- 在 index.html 中找到 <!-- 编辑消息弹窗 --> 附近，添加以下代码 -->
+
+            <!-- 发送语音弹窗 -->
+            <div id="voice-input-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>发送语音</h3>
+                        <button class="close-btn" id="close-voice-input">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- 顶部切换 -->
+                        <div class="chat-settings-nav" style="margin: 0 0 20px 0;">
+                            <div class="nav-item active" id="tab-voice-fake" onclick="switchVoiceTab('fake')">文字转语音</div>
+                            <div class="nav-item" id="tab-voice-real" onclick="switchVoiceTab('real')">录制语音</div>
+                            <div class="nav-indicator" id="voice-nav-indicator" style="width: calc(50% - 4px);"></div>
+                        </div>
+
+                        <!-- 模式1: 伪造语音 (输入文字) -->
+                        <div id="voice-mode-fake">
+                            <div class="setting-group">
+                                <label>语音内容 (点击消息后显示)</label>
+                                <textarea id="voice-fake-text" placeholder="输入这段语音对应的文字内容..." style="height: 100px;"></textarea>
+                            </div>
+                            <div class="setting-group">
+                                <label>语音时长: <span id="voice-fake-duration-val">3</span>秒</label>
+                                <input type="range" id="voice-fake-duration" min="1" max="60" value="3" step="1">
+                            </div>
+                            <button id="send-fake-voice-btn" class="ios-btn-block" style="background-color: #07C160;">发送</button>
+                        </div>
+
+                        <!-- 模式2: 真实录音 (Web Speech API) -->
+                        <div id="voice-mode-real" class="hidden" style="text-align: center; padding: 20px 0;">
+                            <div id="voice-recording-status" style="font-size: 18px; margin-bottom: 20px; color: #888;">点击麦克风开始说话</div>
+                            <div id="voice-mic-btn" class="voice-mic-btn">
+                                <i class="fas fa-microphone"></i>
+                            </div>
+                            <div id="voice-real-result" style="margin-top: 20px; font-style: italic; color: #333; min-height: 20px;"></div>
+                            <button id="send-real-voice-btn" class="ios-btn-block" style="background-color: #07C160; margin-top: 20px;" disabled>发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 </body>
 </html>

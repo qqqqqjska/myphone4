@@ -89,6 +89,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 暴露 state 给全局，以便底部的 grid 系统访问
     window.iphoneSimState = state;
+// --- 在 script.js 顶部 state 变量附近添加 ---
+let currentEditingChatMsgId = null;
+
+// --- 在 init() -> setupEventListeners() 函数内部添加以下代码 ---
+// 大约在 setupEventListeners 函数中，与其他 modal 绑定放在一起
+
+    // 编辑消息弹窗绑定
+    const editChatMsgModal = document.getElementById('edit-chat-msg-modal');
+    const closeEditChatMsgBtn = document.getElementById('close-edit-chat-msg');
+    const saveEditChatMsgBtn = document.getElementById('save-edit-chat-msg-btn');
+
+    if (closeEditChatMsgBtn) {
+        closeEditChatMsgBtn.addEventListener('click', () => {
+            editChatMsgModal.classList.add('hidden');
+            currentEditingChatMsgId = null;
+        });
+    }
+
+    if (saveEditChatMsgBtn) {
+        saveEditChatMsgBtn.addEventListener('click', handleSaveEditedChatMessage);
+    }
 
     // DOM 元素
     const appScreen = document.getElementById('theme-app');
@@ -868,8 +889,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // 点击面板内的项目
             chatMorePanel.querySelectorAll('.more-item').forEach(item => {
                 item.addEventListener('click', (e) => {
-                    // 如果是照片、拍摄、转账、记忆、位置或重回按钮，不执行通用逻辑（由单独的监听器处理）
-                    if (item.id === 'chat-more-photo-btn' || item.id === 'chat-more-camera-btn' || item.id === 'chat-more-transfer-btn' || item.id === 'chat-more-memory-btn' || item.id === 'chat-more-location-btn' || item.id === 'chat-more-regenerate-btn') return;
+                    // 如果是照片、拍摄、转账、记忆、位置、重回或语音按钮，不执行通用逻辑（由单独的监听器处理）
+                    if (item.id === 'chat-more-photo-btn' || item.id === 'chat-more-camera-btn' || item.id === 'chat-more-transfer-btn' || item.id === 'chat-more-memory-btn' || item.id === 'chat-more-location-btn' || item.id === 'chat-more-regenerate-btn' || item.id === 'chat-more-voice-btn') return;
                     
                     e.stopPropagation();
                     const label = item.querySelector('.more-label').textContent;
@@ -878,6 +899,155 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
+                // ============================================================
+        // [修复版] 语音功能：直接集成逻辑，防止作用域错误
+        // ============================================================
+
+        const chatMoreVoiceBtn = document.getElementById('chat-more-voice-btn');
+        const voiceInputModal = document.getElementById('voice-input-modal');
+        const closeVoiceInputBtn = document.getElementById('close-voice-input');
+        
+        // 打开语音弹窗
+        if (chatMoreVoiceBtn) {
+            chatMoreVoiceBtn.addEventListener('click', () => {
+                document.getElementById('chat-more-panel').classList.add('hidden');
+                // 重置状态
+                const fakeText = document.getElementById('voice-fake-text');
+                const realRes = document.getElementById('voice-real-result');
+                const sendRealBtn = document.getElementById('send-real-voice-btn');
+                
+                if (fakeText) fakeText.value = '';
+                if (realRes) realRes.textContent = '';
+                if (sendRealBtn) sendRealBtn.disabled = true;
+                
+                // 默认切回 Tab 1
+                if (typeof window.switchVoiceTab === 'function') {
+                    window.switchVoiceTab('fake');
+                }
+                
+                voiceInputModal.classList.remove('hidden');
+            });
+        }
+
+        // 关闭弹窗
+        if (closeVoiceInputBtn) {
+            closeVoiceInputBtn.addEventListener('click', () => {
+                voiceInputModal.classList.add('hidden');
+                // 如果正在录音，强制停止
+                if (typeof stopVoiceRecording === 'function') stopVoiceRecording(); 
+            });
+        }
+
+        // --- 1. 伪造语音发送逻辑 (直接写在这里) ---
+        const sendFakeVoiceBtn = document.getElementById('send-fake-voice-btn');
+        const voiceFakeDuration = document.getElementById('voice-fake-duration');
+        
+        // 滑动条监听
+        if (voiceFakeDuration) {
+            voiceFakeDuration.addEventListener('input', (e) => {
+                const valSpan = document.getElementById('voice-fake-duration-val');
+                if (valSpan) valSpan.textContent = e.target.value;
+            });
+        }
+
+        // 发送按钮监听
+        if (sendFakeVoiceBtn) {
+            // 移除可能存在的旧监听器（防止重复发送）
+            const newBtn = sendFakeVoiceBtn.cloneNode(true);
+            sendFakeVoiceBtn.parentNode.replaceChild(newBtn, sendFakeVoiceBtn);
+            
+            newBtn.addEventListener('click', () => {
+                const textInput = document.getElementById('voice-fake-text');
+                const durationInput = document.getElementById('voice-fake-duration');
+                
+                const text = textInput.value.trim();
+                const duration = durationInput.value;
+
+                if (!text) {
+                    alert('请输入语音内容文本');
+                    return;
+                }
+
+                const voiceData = {
+                    duration: parseInt(duration),
+                    text: text,
+                    isReal: false
+                };
+
+                // 直接调用当前作用域下的 sendMessage
+                sendMessage(JSON.stringify(voiceData), true, 'voice');
+                voiceInputModal.classList.add('hidden');
+            });
+        }
+
+        // --- 2. 真实录音发送逻辑 (直接写在这里) ---
+        const voiceMicBtn = document.getElementById('voice-mic-btn');
+        const sendRealVoiceBtn = document.getElementById('send-real-voice-btn');
+
+        if (voiceMicBtn) {
+            // 移除旧监听器
+            const newMicBtn = voiceMicBtn.cloneNode(true);
+            voiceMicBtn.parentNode.replaceChild(newMicBtn, voiceMicBtn);
+            
+            newMicBtn.addEventListener('click', () => {
+                // 调用底部定义的 toggleVoiceRecording (因为它涉及很多全局变量，保持在外部定义比较好)
+                // 只要该函数定义在 DOMContentLoaded 内部即可
+                if (typeof toggleVoiceRecording === 'function') {
+                    toggleVoiceRecording();
+                } else {
+                    console.error('toggleVoiceRecording function not found');
+                }
+            });
+        }
+
+        if (sendRealVoiceBtn) {
+            // 移除旧监听器
+            const newSendRealBtn = sendRealVoiceBtn.cloneNode(true);
+            sendRealVoiceBtn.parentNode.replaceChild(newSendRealBtn, sendRealVoiceBtn);
+
+            newSendRealBtn.addEventListener('click', () => {
+                // 这里我们手动获取录音结果的全局变量
+                // 注意：这些变量需要在 script.js 底部正确定义
+                
+                // 如果录音结果为空，给个默认值
+                if (!recordedText) recordedText = '[语音]';
+
+                const voiceData = {
+                    duration: recordedDuration || 1,
+                    text: recordedText,
+                    isReal: true
+                };
+
+                sendMessage(JSON.stringify(voiceData), true, 'voice');
+                voiceInputModal.classList.add('hidden');
+            });
+        }
+
+        // 定义 Tab 切换 (如果之前没定义成功)
+        window.switchVoiceTab = function(mode) {
+            const fakeTab = document.getElementById('tab-voice-fake');
+            const realTab = document.getElementById('tab-voice-real');
+            const fakeMode = document.getElementById('voice-mode-fake');
+            const realMode = document.getElementById('voice-mode-real');
+            const indicator = document.getElementById('voice-nav-indicator');
+
+            if (mode === 'fake') {
+                if(fakeTab) fakeTab.classList.add('active');
+                if(realTab) realTab.classList.remove('active');
+                if(fakeMode) fakeMode.classList.remove('hidden');
+                if(realMode) realMode.classList.add('hidden');
+                if(indicator) indicator.style.transform = 'translateX(0)';
+            } else {
+                if(fakeTab) fakeTab.classList.remove('active');
+                if(realTab) realTab.classList.add('active');
+                if(fakeMode) fakeMode.classList.add('hidden');
+                if(realMode) realMode.classList.remove('hidden');
+                if(indicator) indicator.style.transform = 'translateX(100%)';
+            }
+        };
+        
+        // ============================================================
+
 
         // 表情包系统初始化
         initStickerSystem();
@@ -4942,6 +5112,13 @@ JSON格式示例：
         let contentHtml = '';
         if (type === 'image' || type === 'sticker') {
             contentHtml = `<img src="${text}" style="max-width: 200px; border-radius: 4px;">`;
+                // ... 上面是 if (type === 'image' || type === 'sticker') { ... } 
+        
+        // === 插入点 3：语音消息渲染 ===
+            
+        
+        // 下面是 else if (type === 'transfer') ...
+
         } else if (type === 'transfer') {
             let transferData = { amount: '0.00', remark: '转账', status: 'pending' };
             try {
@@ -5061,6 +5238,7 @@ JSON格式示例：
         }
 
         // 处理特殊消息的样式类
+                // 处理特殊消息的样式类
         let extraClass = '';
         if (type === 'transfer') {
             extraClass = 'transfer-msg';
@@ -5071,7 +5249,51 @@ JSON格式示例：
             } catch(e) {}
         } else if (type === 'sticker') {
             extraClass = 'sticker-msg';
+            contentHtml = `<img src="${text}" onclick="showImagePreview(this.src)">`;
+        } 
+        // ！！！请把下面这一整段覆盖粘贴到这里！！！
+                // ... (在处理 transfer 之后) ...
+        
+        // ！！！确保这部分代码存在且未被注释！！！
+        
+        
+        else if (type === 'voice') {
+            // 1. 标记样式类
+            extraClass = 'voice-msg'; 
+            
+            // 2. 解析数据
+            let duration = '1"';
+            let transText = '[语音]';
+            try {
+                let data = typeof text === 'string' ? JSON.parse(text) : text;
+                duration = (data.duration || 1) + '"';
+                transText = data.text || '';
+            } catch (e) {
+                transText = text;
+            }
+
+            // 3. 生成唯一ID (用于点击切换显示)
+            const uid = 'v-' + Math.random().toString(36).substr(2, 9);
+            
+            // 4. 生成 HTML 结构
+            // 上面是语音条(voice-bar-top)，下面是文字板(voice-text-bottom)，天然垂直排列
+            contentHtml = `
+                <div class="voice-bar-top" onclick="var el=document.getElementById('${uid}'); el.classList.toggle('hidden'); event.stopPropagation();">
+                    <div class="voice-icon-box"><i class="fas fa-rss"></i></div>
+                    <span class="voice-dur-text">${duration}</span>
+                </div>
+                <div id="${uid}" class="voice-text-bottom hidden">
+                    ${transText}
+                </div>
+            `;
         }
+
+        
+        // ...
+
+
+        // ==================
+
 
         // 构建引用 HTML
         let replyHtml = '';
@@ -5305,6 +5527,7 @@ JSON格式示例：
         menu.innerHTML = `
             <div class="context-menu-item" id="menu-quote">引用</div>
             <div class="context-menu-item" id="menu-copy">复制</div>
+            <div class="context-menu-item" id="menu-edit">编辑</div>
             <div class="context-menu-item" id="menu-delete" style="color: #ff3b30;">删除</div>
         `;
         
@@ -5333,6 +5556,22 @@ JSON格式示例：
                 });
             }
             menu.remove();
+        };
+        menu.querySelector('#menu-edit').onclick = () => {
+            if (msgData.msgId) {
+                menu.remove();
+                // 仅允许编辑文本类型的消息，防止破坏 JSON 结构（如转账）
+                // 如果你想允许编辑所有类型（如修改图片URL），可以去掉这个判断
+                if (msgData.type !== 'text') {
+                    if(!confirm('这是一条非文本消息（如图片或转账），直接编辑内容可能会破坏显示格式。确定要编辑吗？')) {
+                        return;
+                    }
+                }
+                openEditChatMessageModal(msgData.msgId, msgData.content);
+            } else {
+                alert('无法编辑此消息（缺少ID）');
+                menu.remove();
+            }
         };
 
         menu.querySelector('#menu-delete').onclick = () => {
@@ -5569,6 +5808,7 @@ ${itineraryContext}
 - 如果你想评论用户最新的动态，请在回复最后另起一行输出：ACTION: COMMENT_MOMENT: 评论内容
 - 如果你想发送图片，请在回复最后另起一行输出：ACTION: SEND_IMAGE: 图片描述
 - 如果你想发送表情包，请在回复最后另起一行输出：ACTION: SEND_STICKER: 表情包描述 (请从可用表情包列表中选择)
+- 如果你想发送语音消息，请在回复最后另起一行输出：ACTION: SEND_VOICE: 秒数 语音内容文本 (例如: ACTION: SEND_VOICE: 5 哈哈，我也这么觉得)
 - 如果你想给用户转账，请在回复最后另起一行输出：ACTION: TRANSFER: 金额 备注 (例如: ACTION: TRANSFER: 88.88 节日快乐)
 - 如果你想接收用户的转账，请在回复最后另起一行输出：ACTION: ACCEPT_TRANSFER: [ID] (例如: ACTION: ACCEPT_TRANSFER: 1737266888888)
 - 如果你想退回用户的转账，请在回复最后另起一行输出：ACTION: RETURN_TRANSFER: [ID]
@@ -5987,6 +6227,27 @@ ${itineraryContext}
                     }
                     processedSegment = processedSegment.replace(sendStickerMatch[0], '');
                 }
+                                // === 插入点 2：解析 AI 语音指令 ===
+                const sendVoiceRegex = /ACTION:\s*SEND_VOICE:\s*(\d+)\s*(.*?)(?:\n|$)/;
+                let sendVoiceMatch;
+                while ((sendVoiceMatch = processedSegment.match(sendVoiceRegex)) !== null) {
+                    const duration = sendVoiceMatch[1];
+                    const text = sendVoiceMatch[2].trim();
+                    if (text) {
+                        // 构造语音数据
+                        const voiceData = {
+                            duration: parseInt(duration),
+                            text: text,
+                            isReal: false
+                        };
+                        // 延迟 1.5秒 发送，模拟录音过程
+                        setTimeout(() => {
+                            sendMessage(JSON.stringify(voiceData), false, 'voice');
+                        }, 1500);
+                    }
+                    processedSegment = processedSegment.replace(sendVoiceMatch[0], '');
+                }
+                // === 插入点 2 结束 ===
 
                 // 解析转账指令
                 let transferMatch;
@@ -9200,3 +9461,189 @@ refreshButtons.forEach(btnId => {
         });
     }
 });
+    // --- 新增逻辑函数 ---
+
+    // 打开编辑弹窗
+    window.openEditChatMessageModal = function(msgId, currentContent) {
+        currentEditingChatMsgId = msgId;
+        const textarea = document.getElementById('edit-chat-msg-content');
+        textarea.value = currentContent;
+        document.getElementById('edit-chat-msg-modal').classList.remove('hidden');
+    };
+
+    // 保存编辑后的消息
+    function handleSaveEditedChatMessage() {
+        if (!currentEditingChatMsgId || !state.currentChatContactId) return;
+
+        const newContent = document.getElementById('edit-chat-msg-content').value.trim();
+        if (!newContent) {
+            alert('消息内容不能为空');
+            return;
+        }
+
+        const messages = state.chatHistory[state.currentChatContactId];
+        const msgIndex = messages.findIndex(m => m.id == currentEditingChatMsgId); // 使用宽松比较，防止类型差异
+
+        if (msgIndex !== -1) {
+            // 更新内容
+            messages[msgIndex].content = newContent;
+            
+            // 保存并刷新
+            saveConfig();
+            renderChatHistory(state.currentChatContactId);
+            
+            // 关闭弹窗
+            document.getElementById('edit-chat-msg-modal').classList.add('hidden');
+            currentEditingChatMsgId = null;
+            
+            // 可选：显示提示
+            // showChatToast('已修改'); 
+        } else {
+            alert('找不到原消息，可能已被删除');
+            document.getElementById('edit-chat-msg-modal').classList.add('hidden');
+        }
+    }
+    // === 插入点 4：语音功能核心逻辑 ===
+
+    // 1. 发送伪造语音
+    function handleSendFakeVoice() {
+        const text = document.getElementById('voice-fake-text').value.trim();
+        const duration = document.getElementById('voice-fake-duration').value;
+
+        if (!text) {
+            alert('请输入语音内容文本');
+            return;
+        }
+
+        const voiceData = {
+            duration: parseInt(duration),
+            text: text,
+            isReal: false
+        };
+
+        sendMessage(JSON.stringify(voiceData), true, 'voice');
+        document.getElementById('voice-input-modal').classList.add('hidden');
+    }
+
+    // 2. 真实录音相关变量
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recognition = null;
+    let isRecording = false;
+    let recordedDuration = 0;
+    let recordingStartTime = 0;
+    let recordedText = '';
+
+    // 3. 切换录音状态
+    function toggleVoiceRecording() {
+        const micBtn = document.getElementById('voice-mic-btn');
+        const statusText = document.getElementById('voice-recording-status');
+        const resultDiv = document.getElementById('voice-real-result');
+        const sendBtn = document.getElementById('send-real-voice-btn');
+
+        if (!isRecording) {
+            // --- 开始录音 ---
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('您的浏览器不支持录音功能，请尝试使用 Chrome 或 Safari。');
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    isRecording = true;
+                    micBtn.classList.add('recording'); // 变红
+                    statusText.textContent = '正在听... (点击停止)';
+                    statusText.style.color = '#FF3B30';
+                    resultDiv.textContent = '正在识别...';
+                    sendBtn.disabled = true;
+                    audioChunks = [];
+                    recordedText = '';
+
+                    // 启动音频录制 (用于计算时长和可能的音频保存)
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    recordingStartTime = Date.now();
+
+                    mediaRecorder.onstop = () => {
+                        const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
+                        recordedDuration = duration > 60 ? 60 : duration;
+                        // 如果有识别结果，启用发送按钮
+                        if (recordedText) sendBtn.disabled = false;
+                        
+                        // 停止所有轨道释放麦克风
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    // 启动语音识别 (Web Speech API)
+                    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        recognition = new SpeechRecognition();
+                        recognition.lang = 'zh-CN';
+                        recognition.continuous = true;
+                        recognition.interimResults = true;
+
+                        recognition.onresult = (event) => {
+                            let finalTranscript = '';
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                                if (event.results[i].isFinal) {
+                                    finalTranscript += event.results[i][0].transcript;
+                                }
+                            }
+                            // 实时更新UI
+                            if (finalTranscript) {
+                                recordedText += finalTranscript;
+                            }
+                            // 显示当前识别的内容（包含未确定的部分）
+                            let interimTranscript = '';
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                                if (!event.results[i].isFinal) {
+                                    interimTranscript += event.results[i][0].transcript;
+                                }
+                            }
+                            resultDiv.textContent = recordedText + interimTranscript;
+                        };
+
+                        recognition.onerror = (event) => {
+                            console.error('语音识别错误', event.error);
+                            if (!recordedText) resultDiv.textContent = '识别失败，请检查麦克风权限或网络';
+                        };
+
+                        recognition.start();
+                    } else {
+                        resultDiv.textContent = '当前浏览器不支持语音转文字，将发送默认文本。';
+                        recordedText = '[语音消息]';
+                        sendBtn.disabled = false;
+                    }
+
+                })
+                .catch(err => {
+                    console.error('无法获取麦克风', err);
+                    alert('无法访问麦克风，请检查权限。');
+                });
+        } else {
+            // --- 停止录音 ---
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            statusText.textContent = '录音结束';
+            statusText.style.color = '#888';
+            
+            if (mediaRecorder) mediaRecorder.stop();
+            if (recognition) recognition.stop();
+        }
+    }
+
+    // 4. 发送真实录音
+    function handleSendRealVoice() {
+        // 如果识别为空，给一个默认值
+        if (!recordedText) recordedText = '[语音]';
+
+        const voiceData = {
+            duration: recordedDuration || 1,
+            text: recordedText,
+            isReal: true
+        };
+
+        sendMessage(JSON.stringify(voiceData), true, 'voice');
+        document.getElementById('voice-input-modal').classList.add('hidden');
+    }
+    // === 插入点 4 结束 ===
