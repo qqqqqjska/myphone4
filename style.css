@@ -3698,7 +3698,7 @@ input.msg-select-checkbox {
     
     gap: 40px 20px; 
     justify-items: center; 
-    padding: 70px 20px 100px 20px;
+    padding: 70px 10px 100px 10px;
     width: 100%;
     box-sizing: border-box;
     position: relative;
