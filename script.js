@@ -9535,102 +9535,139 @@ refreshButtons.forEach(btnId => {
     let recordedText = '';
 
     // 3. 切换录音状态
+        // 3. 切换录音状态 (修复版：移除 getUserMedia，专为 Safari 优化)
     function toggleVoiceRecording() {
         const micBtn = document.getElementById('voice-mic-btn');
         const statusText = document.getElementById('voice-recording-status');
         const resultDiv = document.getElementById('voice-real-result');
         const sendBtn = document.getElementById('send-real-voice-btn');
+        
+        // 兼容性定义
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('您的浏览器不支持语音转文字，请使用 iOS Safari 或 安卓 Chrome。');
+            return;
+        }
 
         if (!isRecording) {
-            // --- 开始录音 ---
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('您的浏览器不支持录音功能，请尝试使用 Chrome 或 Safari。');
-                return;
+            // ===========================
+            //      开始录音逻辑
+            // ===========================
+            
+            // 初始化识别实例
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = true;      // 允许连续说话
+            recognition.interimResults = true;  // 允许返回临时结果
+
+            // 重置状态变量
+            recordedText = '';
+            recordingStartTime = Date.now(); // 手动记录开始时间
+            
+            // --- 绑定事件 ---
+
+            // 1. 真正开始录音的回调
+            recognition.onstart = () => {
+                isRecording = true;
+                micBtn.classList.add('recording'); // 变红
+                statusText.textContent = '正在听... (点击停止)';
+                statusText.style.color = '#FF3B30';
+                resultDiv.textContent = '正在识别...';
+                sendBtn.disabled = true;
+                console.log('语音识别已启动');
+            };
+
+            // 2. 识别结果回调
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                // 累加最终结果
+                if (finalTranscript) {
+                    recordedText += finalTranscript;
+                }
+
+                // UI 显示：已确定的 + 正在猜的
+                resultDiv.textContent = recordedText + interimTranscript;
+                
+                // 只要有内容，就允许发送
+                if (recordedText || interimTranscript) {
+                    sendBtn.disabled = false;
+                }
+            };
+
+            // 3. 错误回调 (重点优化)
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                
+                // 忽略 'no-speech' (用户没说话) 和 'aborted' (手动停止)
+                if (event.error === 'no-speech' || event.error === 'aborted') return;
+
+                isRecording = false;
+                micBtn.classList.remove('recording');
+                statusText.textContent = '点击麦克风开始';
+                statusText.style.color = '#888';
+
+                if (event.error === 'not-allowed') {
+                    alert('无法访问麦克风。\n1. 请检查 Safari 设置权限。\n2. 必须使用 HTTPS 协议访问。');
+                } else if (event.error === 'network') {
+                    alert('网络连接错误，iOS 语音识别需要连接苹果服务器，请检查网络或 HTTPS 配置。');
+                } else {
+                    resultDiv.textContent = '识别出错: ' + event.error;
+                }
+            };
+
+            // 4. 结束回调
+            recognition.onend = () => {
+                // 如果是用户手动点击停止，这里什么都不用做，逻辑在下面 else 里
+                // 但如果是自动断开，我们需要重置 UI
+                if (isRecording) {
+                    // 某些情况下 Safari 会自动断开，这里尝试保持状态或提示
+                    console.log('识别自动断开');
+                    // 可选：如果是意外断开，可以自动重启 recognition.start();
+                }
+            };
+
+            // --- 启动 ---
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("启动失败", e);
+                alert("无法启动录音，请刷新页面重试。");
             }
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    isRecording = true;
-                    micBtn.classList.add('recording'); // 变红
-                    statusText.textContent = '正在听... (点击停止)';
-                    statusText.style.color = '#FF3B30';
-                    resultDiv.textContent = '正在识别...';
-                    sendBtn.disabled = true;
-                    audioChunks = [];
-                    recordedText = '';
-
-                    // 启动音频录制 (用于计算时长和可能的音频保存)
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-                    recordingStartTime = Date.now();
-
-                    mediaRecorder.onstop = () => {
-                        const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
-                        recordedDuration = duration > 60 ? 60 : duration;
-                        // 如果有识别结果，启用发送按钮
-                        if (recordedText) sendBtn.disabled = false;
-                        
-                        // 停止所有轨道释放麦克风
-                        stream.getTracks().forEach(track => track.stop());
-                    };
-
-                    // 启动语音识别 (Web Speech API)
-                    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                        recognition = new SpeechRecognition();
-                        recognition.lang = 'zh-CN';
-                        recognition.continuous = true;
-                        recognition.interimResults = true;
-
-                        recognition.onresult = (event) => {
-                            let finalTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += event.results[i][0].transcript;
-                                }
-                            }
-                            // 实时更新UI
-                            if (finalTranscript) {
-                                recordedText += finalTranscript;
-                            }
-                            // 显示当前识别的内容（包含未确定的部分）
-                            let interimTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (!event.results[i].isFinal) {
-                                    interimTranscript += event.results[i][0].transcript;
-                                }
-                            }
-                            resultDiv.textContent = recordedText + interimTranscript;
-                        };
-
-                        recognition.onerror = (event) => {
-                            console.error('语音识别错误', event.error);
-                            if (!recordedText) resultDiv.textContent = '识别失败，请检查麦克风权限或网络';
-                        };
-
-                        recognition.start();
-                    } else {
-                        resultDiv.textContent = '当前浏览器不支持语音转文字，将发送默认文本。';
-                        recordedText = '[语音消息]';
-                        sendBtn.disabled = false;
-                    }
-
-                })
-                .catch(err => {
-                    console.error('无法获取麦克风', err);
-                    alert('无法访问麦克风，请检查权限。');
-                });
         } else {
-            // --- 停止录音 ---
+            // ===========================
+            //      停止录音逻辑
+            // ===========================
+            if (recognition) {
+                recognition.stop();
+            }
             isRecording = false;
+            
+            // 计算时长 (手动计算)
+            const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
+            recordedDuration = duration > 60 ? 60 : duration;
+
+            // UI 恢复
             micBtn.classList.remove('recording');
             statusText.textContent = '录音结束';
             statusText.style.color = '#888';
             
-            if (mediaRecorder) mediaRecorder.stop();
-            if (recognition) recognition.stop();
+            // 确保如果有字就能发
+            if (recordedText) sendBtn.disabled = false;
         }
     }
+
 
     // 4. 发送真实录音
     function handleSendRealVoice() {
