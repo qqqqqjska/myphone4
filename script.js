@@ -2831,6 +2831,8 @@ let currentEditingChatMsgId = null;
         const keyInput = document.getElementById('whisper-api-key');
         const modelInput = document.getElementById('whisper-model');
         const modeSelect = document.getElementById('whisper-connection-mode');
+        const fetchModelsBtn = document.getElementById('fetch-whisper-models');
+        const modelSelect = document.getElementById('whisper-model-select');
 
         // 初始化模式选择
         if (modeSelect && state.whisperSettings.url) {
@@ -2852,9 +2854,13 @@ let currentEditingChatMsgId = null;
                     const proxyUrl = 'https://corsproxy.io/?https://api.openai.com/v1';
                     urlInput.value = proxyUrl;
                     state.whisperSettings.url = proxyUrl;
+                } else if (mode === 'siliconflow') {
+                    const proxyUrl = 'https://api.siliconflow.cn/v1';
+                    urlInput.value = proxyUrl;
+                    state.whisperSettings.url = proxyUrl;
                 } else {
                     // 切换回自定义时，如果当前是代理地址，则清空方便输入
-                    if (urlInput.value.includes('localhost:3000') || urlInput.value.includes('corsproxy.io')) {
+                    if (urlInput.value.includes('localhost:3000') || urlInput.value.includes('corsproxy.io') || urlInput.value.includes('siliconflow.cn')) {
                         urlInput.value = '';
                         state.whisperSettings.url = '';
                     }
@@ -2889,6 +2895,95 @@ let currentEditingChatMsgId = null;
             modelInput.addEventListener('change', (e) => {
                 state.whisperSettings.model = e.target.value;
             });
+        }
+
+        if (fetchModelsBtn) {
+            fetchModelsBtn.addEventListener('click', handleFetchWhisperModels);
+        }
+
+        if (modelSelect) {
+            modelSelect.addEventListener('change', (e) => {
+                const selectedModel = e.target.value;
+                if (selectedModel) {
+                    modelInput.value = selectedModel;
+                    state.whisperSettings.model = selectedModel;
+                }
+            });
+        }
+    }
+
+    async function handleFetchWhisperModels() {
+        const url = state.whisperSettings.url;
+        const key = state.whisperSettings.key;
+        const btn = document.getElementById('fetch-whisper-models');
+        const select = document.getElementById('whisper-model-select');
+
+        if (!url) {
+            alert('请先输入API地址');
+            return;
+        }
+
+        const originalText = btn.textContent;
+        btn.textContent = '拉取中...';
+        btn.disabled = true;
+
+        try {
+            // 尝试适配不同的API格式，通常是 /v1/models
+            let fetchUrl = url;
+            // 移除末尾的斜杠
+            if (fetchUrl.endsWith('/')) {
+                fetchUrl = fetchUrl.slice(0, -1);
+            }
+            
+            // 如果不是以 /models 结尾，尝试添加
+            if (!fetchUrl.endsWith('/models')) {
+                // 如果是以 /v1 结尾，直接加 /models
+                if (fetchUrl.endsWith('/v1')) {
+                    fetchUrl += '/models';
+                } else {
+                    // 否则尝试加 /v1/models 或 /models
+                    // 这里简单处理，假设用户输入的是 base url
+                    fetchUrl += '/models';
+                }
+            }
+
+            const headers = {};
+            if (key) {
+                headers['Authorization'] = `Bearer ${key}`;
+            }
+
+            const response = await fetch(fetchUrl, { headers });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const models = data.data || data.models || [];
+
+            select.innerHTML = '<option value="">请选择模型</option>';
+            
+            if (models.length === 0) {
+                alert('未获取到模型列表');
+                return;
+            }
+
+            models.forEach(model => {
+                const id = model.id || model;
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id;
+                select.appendChild(option);
+            });
+
+            select.classList.remove('hidden');
+            alert(`成功获取 ${models.length} 个模型`);
+
+        } catch (error) {
+            console.error('获取Whisper模型失败:', error);
+            alert('获取模型失败，请检查API地址和密钥是否正确，或跨域设置。');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
         }
     }
 
@@ -5503,18 +5598,17 @@ JSON格式示例：
                 transText = text;
             }
 
-            // 3. 生成唯一ID (用于点击切换显示)
+            // 3. 生成唯一ID
             const uid = 'v-' + Math.random().toString(36).substr(2, 9);
             
             // 4. 生成 HTML 结构
-            // 上面是语音条(voice-bar-top)，下面是文字板(voice-text-bottom)，天然垂直排列
+            // 使用全局函数处理点击，避免闭包和DOM更新问题
             contentHtml = `
-                <div class="voice-bar-top" onclick="var el=document.getElementById('${uid}'); el.classList.toggle('hidden'); event.stopPropagation();">
+                <div class="voice-bar-top" onclick="window.playVoiceMsg('${msgId}', '${uid}', event)">
                     <div class="voice-icon-box"><i class="fas fa-rss"></i></div>
                     <span class="voice-dur-text">${duration}</span>
                 </div>
-                <div id="${uid}" class="voice-text-bottom hidden">${transText}</div>
-
+                <div id="${uid}" class="voice-text-bottom hidden" onclick="this.classList.add('hidden'); event.stopPropagation();">${transText}</div>
             `;
         }
 
@@ -10154,6 +10248,7 @@ refreshButtons.forEach(btnId => {
     let recordedDuration = 0;
     let recordingStartTime = 0;
     let recordedText = '';
+    let recordedAudio = null; // 新增：存储录音数据的 Base64
 
     // 3. 切换录音状态 (使用 MediaRecorder + Whisper API)
     async function toggleVoiceRecording() {
@@ -10188,6 +10283,13 @@ refreshButtons.forEach(btnId => {
                     // 计算时长
                     const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
                     recordedDuration = duration > 60 ? 60 : duration;
+
+                    // 将音频转换为 Base64 保存
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = () => {
+                        recordedAudio = reader.result;
+                    };
 
                     // UI 更新
                     micBtn.classList.remove('recording');
@@ -10281,7 +10383,8 @@ refreshButtons.forEach(btnId => {
         const voiceData = {
             duration: recordedDuration || 1,
             text: recordedText,
-            isReal: true
+            isReal: true,
+            audio: recordedAudio // 发送音频数据
         };
 
         sendMessage(JSON.stringify(voiceData), true, 'voice');
@@ -11020,5 +11123,56 @@ function resetMeetingFontAction() {
     saveConfig();
     alert('见面字体已重置为跟随系统');
 }
+
+// 5. 播放语音消息 (全局函数)
+window.playVoiceMsg = function(msgId, textElId, event) {
+    if (event) event.stopPropagation();
+    
+    const textEl = document.getElementById(textElId);
+    if (textEl) textEl.classList.remove('hidden');
+
+    // 查找消息
+    let targetMsg = null;
+    if (state.currentChatContactId && state.chatHistory[state.currentChatContactId]) {
+        targetMsg = state.chatHistory[state.currentChatContactId].find(m => m.id == msgId);
+    }
+
+    if (!targetMsg) {
+        console.error('Message not found:', msgId);
+        return;
+    }
+
+    let audioData = null;
+    try {
+        // 消息内容可能是 JSON 字符串
+        const data = typeof targetMsg.content === 'string' ? JSON.parse(targetMsg.content) : targetMsg.content;
+        audioData = data.audio;
+    } catch (e) {
+        console.error('Parse error', e);
+    }
+
+    if (audioData) {
+        const audio = new Audio(audioData);
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('i');
+        
+        if (icon) icon.classList.add('voice-playing-anim');
+        
+        audio.onended = () => {
+            if (icon) icon.classList.remove('voice-playing-anim');
+        };
+        
+        audio.onerror = (e) => {
+            console.error('Audio play error', e);
+            if (icon) icon.classList.remove('voice-playing-anim');
+            // alert('无法播放音频'); // 避免打扰用户
+        };
+        
+        audio.play().catch(err => {
+            console.error('Play error:', err);
+            if (icon) icon.classList.remove('voice-playing-anim');
+        });
+    }
+};
 
 });

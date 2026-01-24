@@ -4455,3 +4455,15 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
 #meeting-detail-screen .meeting-input-area input {
     font-family: var(--meeting-font-family) !important;
 }
+
+/* Voice Playing Animation */
+@keyframes voice-play {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+.voice-playing-anim {
+    animation: voice-play 1s infinite;
+    color: #34C759 !important; /* 播放时变绿 */
+}

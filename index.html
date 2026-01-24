@@ -256,6 +256,7 @@
                                 <option value="custom">自定义地址 (直连/第三方)</option>
                                 <option value="local_proxy">本地代理 (解决跨域)</option>
                                 <option value="corsproxy">公共代理 (corsproxy.io)</option>
+                                <option value="siliconflow">硅基流动 (国内直连)</option>
                             </select>
                         </div>
                     </div>
@@ -274,7 +275,13 @@
                     <div class="list-item">
                         <div class="list-content column">
                             <label>模型 (Model)</label>
+                            <div class="input-row full-width" style="margin-bottom: 10px;">
+                                <button id="fetch-whisper-models" class="ios-btn-block">拉取模型列表</button>
+                            </div>
                             <input type="text" id="whisper-model" placeholder="whisper-1" value="whisper-1">
+                            <select id="whisper-model-select" class="hidden" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; background-color: #f2f2f7;">
+                                <option value="">选择模型...</option>
+                            </select>
                         </div>
                     </div>
                 </div>
