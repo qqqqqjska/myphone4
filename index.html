@@ -1137,8 +1137,26 @@
                     </div>
                     <div class="modal-body">
                         <div class="setting-group">
+                            <label>文风预设</label>
+                            <div class="input-row full-width">
+                                <select id="meeting-style-preset-select">
+                                    <option value="">-- 选择预设 --</option>
+                                </select>
+                                <button id="save-meeting-style-preset" class="ios-btn-small">保存</button>
+                                <button id="delete-meeting-style-preset" class="ios-btn-small danger">删除</button>
+                            </div>
+                        </div>
+                        <div class="setting-group">
                             <label>描写风格</label>
                             <textarea id="meeting-style-input" placeholder="例如：细腻、唯美、注重环境描写..." style="height: 100px;"></textarea>
+                        </div>
+                        <div class="setting-group">
+                            <label>AI输出字数范围</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="number" id="meeting-min-words" placeholder="最小字数" style="flex: 1;">
+                                <span>-</span>
+                                <input type="number" id="meeting-max-words" placeholder="最大字数" style="flex: 1;">
+                            </div>
                         </div>
                         <button id="save-meeting-style-btn" class="ios-btn-block">保存</button>
                     </div>
@@ -2077,6 +2095,23 @@
                             <textarea id="edit-chat-msg-content" placeholder="输入新的消息内容..." style="height: 150px;"></textarea>
                         </div>
                         <button id="save-edit-chat-msg-btn" class="ios-btn-block">保存修改</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 编辑见面剧情弹窗 -->
+            <div id="edit-meeting-msg-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>编辑剧情</h3>
+                        <button class="close-btn" id="close-edit-meeting-msg">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>剧情内容</label>
+                            <textarea id="edit-meeting-msg-content" placeholder="输入新的剧情内容..." style="height: 200px; font-family: inherit;"></textarea>
+                        </div>
+                        <button id="save-edit-meeting-msg-btn" class="ios-btn-block">保存修改</button>
                     </div>
                 </div>
             </div>

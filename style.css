@@ -4442,14 +4442,15 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
     --meeting-font-family: var(--font-family);
 }
 
-/* 2. 强行指定见面详情页及其所有子元素使用该变量 */
-#meeting-detail-screen,
-#meeting-detail-screen * {
-    font-family: var(--meeting-font-family) !important;
-}
+/* 2. 指定见面详情页主要文本区域使用该变量 (避免覆盖图标字体) */
+/* 移除容器级别的强制字体，防止覆盖 FontAwesome */
+/* #meeting-detail-screen { font-family: ... } */
 
-/* 3. 修复输入框字体 */
-#meeting-input-area textarea,
-#meeting-input-area input {
+/* 只针对文本内容应用字体，防止影响 FontAwesome 图标 */
+#meeting-detail-screen .meeting-card-content,
+#meeting-detail-screen .meeting-card-name,
+#meeting-detail-screen .meeting-item-summary,
+#meeting-detail-screen .meeting-input-area textarea,
+#meeting-detail-screen .meeting-input-area input {
     font-family: var(--meeting-font-family) !important;
 }

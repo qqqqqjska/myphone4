@@ -855,6 +855,8 @@ let currentEditingChatMsgId = null;
             const contact = state.contacts.find(c => c.id === state.currentChatContactId);
             if(contact) {
                 document.getElementById('meeting-style-input').value = contact.meetingStyle || '';
+                document.getElementById('meeting-min-words').value = contact.meetingMinWords || '';
+                document.getElementById('meeting-max-words').value = contact.meetingMaxWords || '';
             }
             meetingStyleModal.classList.remove('hidden');
         });
@@ -1606,11 +1608,7 @@ let currentEditingChatMsgId = null;
              document.getElementById('meeting-style-modal').classList.add('hidden');
         });
         resetButton('save-meeting-style-btn', function() {
-             // 简单的保存逻辑
-             const styleVal = document.getElementById('meeting-style-input').value;
-             // 这里可以存到 contact 或者全局，暂时先存全局或者打印
-             console.log("文风已保存:", styleVal);
-             document.getElementById('meeting-style-modal').classList.add('hidden');
+             saveMeetingStyle();
         });
                 // 8. 绑定 AI 续写按钮
         resetButton('meeting-ai-continue-btn', function() {
@@ -10383,9 +10381,14 @@ refreshButtons.forEach(btnId => {
     // 7. 保存文风
     function saveMeetingStyle() {
         const style = document.getElementById('meeting-style-input').value.trim();
+        const minWords = document.getElementById('meeting-min-words').value;
+        const maxWords = document.getElementById('meeting-max-words').value;
+
         const contact = state.contacts.find(c => c.id === state.currentChatContactId);
         if (contact) {
             contact.meetingStyle = style;
+            contact.meetingMinWords = minWords;
+            contact.meetingMaxWords = maxWords;
             saveConfig();
             document.getElementById('meeting-style-modal').classList.add('hidden');
             // 可以加个 Toast 提示
@@ -10395,7 +10398,7 @@ refreshButtons.forEach(btnId => {
 
     // 8. 结束见面
     function endMeeting() {
-        if (!confirm('确定结束这次见面吗？这将保存当前进度并返回聊天界面。')) return;
+        if (!confirm('确定结束这次见面吗？这将保存当前进度并返回见面列表。')) return;
         
         const contactId = state.currentChatContactId;
         const meetingId = state.currentMeetingId;
@@ -10403,7 +10406,7 @@ refreshButtons.forEach(btnId => {
         const meeting = meetings.find(m => m.id === meetingId);
 
         document.getElementById('meeting-detail-screen').classList.add('hidden');
-        document.getElementById('meetings-screen').classList.add('hidden');
+        // document.getElementById('meetings-screen').classList.add('hidden'); // 不隐藏列表页
         
         state.currentMeetingId = null;
         renderMeetingsList(contactId); // 刷新列表
@@ -10630,8 +10633,17 @@ refreshButtons.forEach(btnId => {
         if (newUserInput) {
             prompt += `(用户动作/语言): ${newUserInput}\n`;
         }
+
+        // 添加字数要求
+        let lengthInstruction = "";
+        if (contact.meetingMinWords || contact.meetingMaxWords) {
+            const min = contact.meetingMinWords || '50'; // 默认给个下限
+            const max = contact.meetingMaxWords || '不限';
+            lengthInstruction = `\n【重要限制】\n请务必将回复字数严格控制在 ${min} 到 ${max} 字之间。不要过短也不要过长。\n`;
+        }
         
-        prompt += `\n请根据以上内容，续写接下来的剧情（描写${contact.name}的反应）：`;
+        prompt += `\n请根据以上内容，续写接下来的剧情（描写${contact.name}的反应）。`;
+        prompt += lengthInstruction; // 将字数限制放在最后，增强权重
         
         return prompt;
     }
