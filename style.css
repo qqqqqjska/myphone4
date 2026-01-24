@@ -4265,17 +4265,18 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
 }
 
 .meeting-action-icon {
-    font-size: 14px;
-    color: #999;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
-    padding: 5px;
+    padding: 4px;
+    object-fit: contain;
+    opacity: 0.6;
+    transition: opacity 0.2s;
 }
 .meeting-action-icon:hover {
-    color: #007AFF;
+    opacity: 1;
 }
-.meeting-action-icon.danger:hover {
-    color: #FF3B30;
-}
+/* 图片图标无法通过 CSS 改变颜色，所以移除 color hover 效果，改用透明度 */
 
 /* 底部输入区 */
 .meeting-input-area {

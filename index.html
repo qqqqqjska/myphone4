@@ -246,6 +246,39 @@
                     </div>
                 </div>
 
+                <!-- Whisper API 设置 -->
+                <div class="section-title">语音转文字 (Whisper) 设置</div>
+                <div class="ios-list-group">
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>连接模式</label>
+                            <select id="whisper-connection-mode" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; background-color: #f2f2f7;">
+                                <option value="custom">自定义地址 (直连/第三方)</option>
+                                <option value="local_proxy">本地代理 (解决跨域)</option>
+                                <option value="corsproxy">公共代理 (corsproxy.io)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>API 地址 (Base URL)</label>
+                            <input type="text" id="whisper-api-url" placeholder="https://api.openai.com/v1">
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>API 密钥 (Key)</label>
+                            <input type="password" id="whisper-api-key" placeholder="sk-...">
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>模型 (Model)</label>
+                            <input type="text" id="whisper-model" placeholder="whisper-1" value="whisper-1">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 副 API 设置 -->
                 <div class="section-title">副 API 设置</div>
                 
@@ -1207,6 +1240,51 @@
                             </div>
                         </div>
 
+                        <!-- 图标设置 -->
+                        <div class="section-title" style="margin-left: 0;">图标设置</div>
+                        <div class="ios-list-group">
+                            <div class="list-item">
+                                <div class="list-content">
+                                    <label>编辑图标</label>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <img id="meeting-edit-icon-preview" src="" style="width: 20px; height: 20px; object-fit: contain;">
+                                        <input type="file" id="meeting-edit-icon-upload" accept="image/*" class="file-input-hidden">
+                                        <label for="meeting-edit-icon-upload" class="ios-btn">更换</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content">
+                                    <label>删除图标</label>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <img id="meeting-delete-icon-preview" src="" style="width: 20px; height: 20px; object-fit: contain;">
+                                        <input type="file" id="meeting-delete-icon-upload" accept="image/*" class="file-input-hidden">
+                                        <label for="meeting-delete-icon-upload" class="ios-btn">更换</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content">
+                                    <label>结束图标</label>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <img id="meeting-end-icon-preview" src="" style="width: 20px; height: 20px; object-fit: contain;">
+                                        <input type="file" id="meeting-end-icon-upload" accept="image/*" class="file-input-hidden">
+                                        <label for="meeting-end-icon-upload" class="ios-btn">更换</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content">
+                                    <label>续写图标</label>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <img id="meeting-continue-icon-preview" src="" style="width: 20px; height: 20px; object-fit: contain;">
+                                        <input type="file" id="meeting-continue-icon-upload" accept="image/*" class="file-input-hidden">
+                                        <label for="meeting-continue-icon-upload" class="ios-btn">更换</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- CSS 自定义 -->
                         <div class="section-title" style="margin-left: 0;">自定义 CSS (见面模式)</div>
                         <div class="ios-list-group">
@@ -1238,7 +1316,9 @@
         <!-- 2. 线下见面详情页 -->
         <div id="meeting-detail-screen" class="sub-screen hidden" style="z-index: 190; background-color: #f5f5f5; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
             <div class="app-header transparent-header" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);">
-                <button id="end-meeting-btn" class="back-btn" style="color: #FF3B30;"><i class="fas fa-sign-out-alt"></i> 结束</button>
+                <button id="end-meeting-btn" class="back-btn" style="color: #FF3B30;">
+                    <img id="meeting-end-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYzQjMwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTkgMjFIMWMtMS4xIDAtMi0uOS0yLTJWMWMwLTEuMS45LTIgMi0yaDhNMjEgMTJsLTUtNW01IDVsLTUgNW01LTVoLTEzIi8+PC9zdmc+" style="width: 20px; height: 20px; object-fit: contain; margin-right: 5px;"> 结束
+                </button>
                 <h3 id="meeting-detail-title">线下见面</h3>
                 <div style="width: 60px;"></div>
             </div>
@@ -1254,11 +1334,28 @@
                 
                 <!-- AI续写按钮 (魔法棒) -->
                 <button id="meeting-ai-continue-btn" class="meeting-icon-btn" title="AI续写 (让剧情继续)">
-                    <i class="fas fa-magic"></i>
+                    <img id="meeting-continue-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTE1IDRWMiIvPjxwYXRoIGQ9Ik0xNSAxNnYtMiIvPjxwYXRoIGQ9Ik04IDloMiIvPjxwYXRoIGQ9Ik0yMCA5aDIiLz48cGF0aCBkPSJNMTcuOCAxMS44TDE5IDEzIi8+PHBhdGggZD0iTTEwLjYgNi42TDEyIDgiLz48cGF0aCBkPSJNNC44IDExLjhMNiAxMyIvPjxwYXRoIGQ9Ik0xMiA0LjhMMTAuNiA2Ii8+PHBhdGggZD0iTTE5IDQuOEwxNy44IDYiLz48cGF0aCBkPSJNMTIgMTMuMkw0LjggMjAuNGEyLjggMi44IDAgMCAwIDQgNEwxNiAxNy4yIi8+PC9zdmc+" style="width: 24px; height: 24px; object-fit: contain;">
                 </button>
                 
                 <!-- 原发送按钮 (隐藏，逻辑保留) -->
                 <button id="meeting-send-btn" style="display:none;"></button>
+            </div>
+
+            <!-- 见面剧情编辑弹窗 -->
+            <div id="edit-meeting-msg-modal" class="modal hidden" style="z-index: 210;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>编辑剧情</h3>
+                        <button class="close-btn" id="close-edit-meeting-msg">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>剧情内容</label>
+                            <textarea id="edit-meeting-msg-content" placeholder="输入新的剧情内容..." style="height: 150px;"></textarea>
+                        </div>
+                        <button id="save-edit-meeting-msg-btn" class="ios-btn-block">保存修改</button>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -2098,23 +2195,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 编辑见面剧情弹窗 -->
-            <div id="edit-meeting-msg-modal" class="modal hidden">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>编辑剧情</h3>
-                        <button class="close-btn" id="close-edit-meeting-msg">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="setting-group">
-                            <label>剧情内容</label>
-                            <textarea id="edit-meeting-msg-content" placeholder="输入新的剧情内容..." style="height: 200px; font-family: inherit;"></textarea>
-                        </div>
-                        <button id="save-edit-meeting-msg-btn" class="ios-btn-block">保存修改</button>
-                    </div>
-                </div>
-            </div>
 <!-- 在 index.html 中找到 <!-- 编辑消息弹窗 --> 附近，添加以下代码 -->
 
             <!-- 发送语音弹窗 -->
@@ -2160,3 +2240,27 @@
 
 </body>
 </html>
+
+</file_content>
+
+现在您已经获得了文件的最新状态，请使用更少、更精确的 SEARCH 块再次尝试操作。特别是对于大型文件，明智的做法可能是尝试将自己限制在每次不超过 5 个 SEARCH/REPLACE 块，然后等待用户对操作结果的响应，然后再进行另一个 replace_in_file 调用来进行额外的编辑。
+（如果您连续 3 次遇到此错误，您可以使用 write_to_file 工具作为后备方案。）
+</error><environment_details>
+# VSCode Visible Files
+script.js
+index.html
+
+# VSCode Open Tabs
+style.css
+script.js
+index.html
+
+# 当前时间
+2026/1/24 下午3:18:00 (Asia/Shanghai, UTC+8:00)
+
+# 上下文窗口使用
+0 / 300K 令牌已使用 (0%)
+
+# 当前模式
+行动模式
+</environment_details>

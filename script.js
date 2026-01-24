@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
         cssPresets: [],
         meetingCss: '', // 见面模式自定义CSS
         meetingCssPresets: [], // 见面模式CSS预设
+        meetingIcons: {
+            edit: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTk5OTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTExIDRINFYyMmgxNFYxMSIvPjxwYXRoIGQ9Ik0xOC41IDIuNWEyLjEyMSAyLjEyMSAwIDAgMSAzIDNMMTIgMTVIOHYtNGw5LjUtOS41eiIvPjwvc3ZnPg==',
+            delete: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYzQjMwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMyA2IDUgNiAyMSA2Ii8+PHBhdGggZD0iTTE5IDZ2MTRhMiAyIDAgMCAxLTIgMkg3YTIgMiAwIDAgMS0yLTJWNm0zIDBUNGEyIDIgMCAwIDEgMi0yaDRhMiAyIDAgMCAxIDIgMnYyIi8+PGxpbmUgeDE9IjEwIiB5MT0iMTEiIHgyPSIxMCIgeTI9IjE3Ii8+PGxpbmUgeDE9IjE0IiB5MT0iMTEiIHgyPSIxNCIgeTI9IjE3Ii8+PC9zdmc+',
+            end: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYzQjMwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTkgMjFIMWMtMS4xIDAtMi0uOS0yLTJWMWMwLTEuMS45LTIgMi0yaDhNMjEgMTJsLTUtNW01IDVsLTUgNW01LTVoLTEzIi8+PC9zdmc+',
+            continue: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTE1IDRWMiIvPjxwYXRoIGQ9Ik0xNSAxNnYtMiIvPjxwYXRoIGQ9Ik04IDloMiIvPjxwYXRoIGQ9Ik0yMCA5aDIiLz48cGF0aCBkPSJNMTcuOCAxMS44TDE5IDEzIi8+PHBhdGggZD0iTTEwLjYgNi42TDEyIDgiLz48cGF0aCBkPSJNNC44IDExLjhMNiAxMyIvPjxwYXRoIGQ9Ik0xMiA0LjhMMTAuNiA2Ii8+PHBhdGggZD0iTTE5IDQuOEwxNy44IDYiLz48cGF0aCBkPSJNMTIgMTMuMkw0LjggMjAuNGEyLjggMi44IDAgMCAwIDQgNEwxNiAxNy4yIi8+PC9zdmc+'
+        },
         aiSettings: {
             url: '',
             key: '',
@@ -32,6 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
         },
         aiPresets2: [],
+        whisperSettings: {
+            url: '',
+            key: '',
+            model: 'whisper-1'
+        },
         chatWallpapers: [], // { id, data }
         tempSelectedChatBg: null, // 临时存储聊天设置中选中的背景
         tempSelectedGroup: null, // 临时存储聊天设置中选中的分组
@@ -1267,6 +1278,9 @@ let currentEditingChatMsgId = null;
         
         // AI 设置相关 (副)
         setupAiListeners(true);
+
+        // Whisper 设置相关
+        setupWhisperListeners();
 
         // 通用设置
         const defaultVirtualImageUrlInput = document.getElementById('default-virtual-image-url');
@@ -2810,6 +2824,72 @@ let currentEditingChatMsgId = null;
 
         const aiPresetSelect = document.getElementById(`ai-preset-select${suffix}`);
         if (aiPresetSelect) aiPresetSelect.addEventListener('change', (e) => handleApplyAiPreset(e, isSecondary));
+    }
+
+    function setupWhisperListeners() {
+        const urlInput = document.getElementById('whisper-api-url');
+        const keyInput = document.getElementById('whisper-api-key');
+        const modelInput = document.getElementById('whisper-model');
+        const modeSelect = document.getElementById('whisper-connection-mode');
+
+        // 初始化模式选择
+        if (modeSelect && state.whisperSettings.url) {
+            if (state.whisperSettings.url.includes('localhost:3000')) {
+                modeSelect.value = 'local_proxy';
+            } else {
+                modeSelect.value = 'custom';
+            }
+        }
+
+        if (modeSelect) {
+            modeSelect.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                if (mode === 'local_proxy') {
+                    const proxyUrl = 'http://localhost:3000/v1';
+                    urlInput.value = proxyUrl;
+                    state.whisperSettings.url = proxyUrl;
+                } else if (mode === 'corsproxy') {
+                    const proxyUrl = 'https://corsproxy.io/?https://api.openai.com/v1';
+                    urlInput.value = proxyUrl;
+                    state.whisperSettings.url = proxyUrl;
+                } else {
+                    // 切换回自定义时，如果当前是代理地址，则清空方便输入
+                    if (urlInput.value.includes('localhost:3000') || urlInput.value.includes('corsproxy.io')) {
+                        urlInput.value = '';
+                        state.whisperSettings.url = '';
+                    }
+                }
+            });
+        }
+
+        if (urlInput) {
+            urlInput.value = state.whisperSettings.url || '';
+            urlInput.addEventListener('change', (e) => {
+                state.whisperSettings.url = e.target.value;
+                // 如果用户手动输入了非代理地址，更新下拉菜单状态
+                if (modeSelect) {
+                    if (e.target.value.includes('localhost:3000')) {
+                        modeSelect.value = 'local_proxy';
+                    } else {
+                        modeSelect.value = 'custom';
+                    }
+                }
+            });
+        }
+
+        if (keyInput) {
+            keyInput.value = state.whisperSettings.key || '';
+            keyInput.addEventListener('change', (e) => {
+                state.whisperSettings.key = e.target.value;
+            });
+        }
+
+        if (modelInput) {
+            modelInput.value = state.whisperSettings.model || 'whisper-1';
+            modelInput.addEventListener('change', (e) => {
+                state.whisperSettings.model = e.target.value;
+            });
+        }
     }
 
     // --- 身份管理功能 ---
@@ -7986,6 +8066,58 @@ if (resetFontBtn) {
             saveConfig();
             alert('见面模式 CSS 已应用');
         });
+
+        // 图标上传绑定
+        const meetingEditIconUpload = document.getElementById('meeting-edit-icon-upload');
+        if (meetingEditIconUpload) {
+            // 移除旧监听器
+            const newUpload = meetingEditIconUpload.cloneNode(true);
+            meetingEditIconUpload.parentNode.replaceChild(newUpload, meetingEditIconUpload);
+            newUpload.addEventListener('change', (e) => handleMeetingIconUpload(e, 'edit'));
+        }
+
+        const meetingDeleteIconUpload = document.getElementById('meeting-delete-icon-upload');
+        if (meetingDeleteIconUpload) {
+            // 移除旧监听器
+            const newUpload = meetingDeleteIconUpload.cloneNode(true);
+            meetingDeleteIconUpload.parentNode.replaceChild(newUpload, meetingDeleteIconUpload);
+            newUpload.addEventListener('change', (e) => handleMeetingIconUpload(e, 'delete'));
+        }
+
+        // 初始化图标预览
+        if (state.meetingIcons) {
+            const editPreview = document.getElementById('meeting-edit-icon-preview');
+            const deletePreview = document.getElementById('meeting-delete-icon-preview');
+            if (editPreview && state.meetingIcons.edit) editPreview.src = state.meetingIcons.edit;
+            if (deletePreview && state.meetingIcons.delete) deletePreview.src = state.meetingIcons.delete;
+        }
+    }
+
+    function handleMeetingIconUpload(e, type) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        compressImage(file, 100, 0.7).then(base64 => {
+            if (!state.meetingIcons) state.meetingIcons = {};
+            state.meetingIcons[type] = base64;
+            saveConfig();
+            
+            // 更新预览
+            const preview = document.getElementById(`meeting-${type}-icon-preview`);
+            if (preview) preview.src = base64;
+            
+            // 如果当前在详情页，刷新
+            if (state.currentMeetingId && state.currentChatContactId) {
+                 const meetings = state.meetings[state.currentChatContactId];
+                 const meeting = meetings.find(m => m.id === state.currentMeetingId);
+                 if (meeting) renderMeetingCards(meeting);
+            }
+            alert('图标已更新');
+        }).catch(err => {
+            console.error('图标处理失败', err);
+            alert('图标处理失败');
+        });
+        e.target.value = '';
     }
 
     function applyMeetingCss(cssContent) {
@@ -8348,6 +8480,7 @@ if (resetFontBtn) {
                 if (!state.aiPresets) state.aiPresets = [];
                 if (!state.aiSettings2) state.aiSettings2 = { url: '', key: '', model: '', temperature: 0.7 };
                 if (!state.aiPresets2) state.aiPresets2 = [];
+                if (!state.whisperSettings) state.whisperSettings = { url: '', key: '', model: 'whisper-1' };
                 if (!state.chatWallpapers) state.chatWallpapers = [];
                 if (!state.contacts) state.contacts = [];
                 if (!state.chatHistory) state.chatHistory = {};
@@ -8429,6 +8562,7 @@ if (resetFontBtn) {
                 renderAiPresets(true);
                 updateAiUi();
                 updateAiUi(true);
+                setupWhisperListeners(); // 重新初始化 Whisper 监听器以填充值
                 renderContactList();
                 migrateWorldbookData();
                 renderWorldbookCategoryList();
@@ -10016,25 +10150,21 @@ refreshButtons.forEach(btnId => {
     // 2. 真实录音相关变量
     let mediaRecorder = null;
     let audioChunks = [];
-    let recognition = null;
     let isRecording = false;
     let recordedDuration = 0;
     let recordingStartTime = 0;
     let recordedText = '';
 
-    // 3. 切换录音状态
-        // 3. 切换录音状态 (修复版：移除 getUserMedia，专为 Safari 优化)
-    function toggleVoiceRecording() {
+    // 3. 切换录音状态 (使用 MediaRecorder + Whisper API)
+    async function toggleVoiceRecording() {
         const micBtn = document.getElementById('voice-mic-btn');
         const statusText = document.getElementById('voice-recording-status');
         const resultDiv = document.getElementById('voice-real-result');
         const sendBtn = document.getElementById('send-real-voice-btn');
         
-        // 兼容性定义
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            alert('您的浏览器不支持语音转文字，请使用 iOS Safari 或 安卓 Chrome。');
+        // 检查 Whisper 配置
+        if (!state.whisperSettings.url || !state.whisperSettings.key) {
+            alert('请先在设置中配置 Whisper API');
             return;
         }
 
@@ -10042,117 +10172,103 @@ refreshButtons.forEach(btnId => {
             // ===========================
             //      开始录音逻辑
             // ===========================
-            
-            // 初始化识别实例
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-CN';
-            recognition.continuous = true;      // 允许连续说话
-            recognition.interimResults = true;  // 允许返回临时结果
-
-            // 重置状态变量
-            recordedText = '';
-            recordingStartTime = Date.now(); // 手动记录开始时间
-            
-            // --- 绑定事件 ---
-
-            // 1. 真正开始录音的回调
-            recognition.onstart = () => {
-                isRecording = true;
-                micBtn.classList.add('recording'); // 变红
-                statusText.textContent = '正在听... (点击停止)';
-                statusText.style.color = '#FF3B30';
-                resultDiv.textContent = '正在识别...';
-                sendBtn.disabled = true;
-                console.log('语音识别已启动');
-            };
-
-            // 2. 识别结果回调
-            recognition.onresult = (event) => {
-                let finalTranscript = '';
-                let interimTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                // 累加最终结果
-                if (finalTranscript) {
-                    recordedText += finalTranscript;
-                }
-
-                // UI 显示：已确定的 + 正在猜的
-                resultDiv.textContent = recordedText + interimTranscript;
-                
-                // 只要有内容，就允许发送
-                if (recordedText || interimTranscript) {
-                    sendBtn.disabled = false;
-                }
-            };
-
-            // 3. 错误回调 (重点优化)
-            recognition.onerror = (event) => {
-                console.error('语音识别错误:', event.error);
-                
-                // 忽略 'no-speech' (用户没说话) 和 'aborted' (手动停止)
-                if (event.error === 'no-speech' || event.error === 'aborted') return;
-
-                isRecording = false;
-                micBtn.classList.remove('recording');
-                statusText.textContent = '点击麦克风开始';
-                statusText.style.color = '#888';
-
-                if (event.error === 'not-allowed') {
-                    alert('无法访问麦克风。\n1. 请检查 Safari 设置权限。\n2. 必须使用 HTTPS 协议访问。');
-                } else if (event.error === 'network') {
-                    alert('网络连接错误，iOS 语音识别需要连接苹果服务器，请检查网络或 HTTPS 配置。');
-                } else {
-                    resultDiv.textContent = '识别出错: ' + event.error;
-                }
-            };
-
-            // 4. 结束回调
-            recognition.onend = () => {
-                // 如果是用户手动点击停止，这里什么都不用做，逻辑在下面 else 里
-                // 但如果是自动断开，我们需要重置 UI
-                if (isRecording) {
-                    // 某些情况下 Safari 会自动断开，这里尝试保持状态或提示
-                    console.log('识别自动断开');
-                    // 可选：如果是意外断开，可以自动重启 recognition.start();
-                }
-            };
-
-            // --- 启动 ---
             try {
-                recognition.start();
-            } catch (e) {
-                console.error("启动失败", e);
-                alert("无法启动录音，请刷新页面重试。");
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // 或者 audio/mp4, audio/wav
+                    const audioFile = new File([audioBlob], "recording.webm", { type: 'audio/webm' });
+                    
+                    // 计算时长
+                    const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
+                    recordedDuration = duration > 60 ? 60 : duration;
+
+                    // UI 更新
+                    micBtn.classList.remove('recording');
+                    statusText.textContent = '正在转文字...';
+                    statusText.style.color = '#007AFF';
+                    
+                    // 上传到 Whisper API
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', audioFile);
+                        formData.append('model', state.whisperSettings.model || 'whisper-1');
+                        // formData.append('language', 'zh'); // 可选：指定语言
+
+                        let fetchUrl = state.whisperSettings.url;
+                        if (!fetchUrl.endsWith('/audio/transcriptions')) {
+                            fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'audio/transcriptions' : fetchUrl + '/audio/transcriptions';
+                        }
+
+                        const response = await fetch(fetchUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${state.whisperSettings.key}`
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API Error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        recordedText = data.text;
+                        
+                        resultDiv.textContent = recordedText;
+                        statusText.textContent = '录音结束';
+                        statusText.style.color = '#888';
+                        
+                        if (recordedText) {
+                            sendBtn.disabled = false;
+                        }
+
+                    } catch (error) {
+                        console.error('Whisper API Error:', error);
+                        let errorMsg = error.message;
+                        if (errorMsg === 'Failed to fetch') {
+                            errorMsg += ' (可能是跨域问题或网络连接超时，请检查API地址是否支持跨域访问，或尝试使用代理)';
+                        }
+                        resultDiv.textContent = '转文字失败: ' + errorMsg;
+                        statusText.textContent = '出错';
+                        statusText.style.color = '#FF3B30';
+                    }
+                    
+                    // 停止所有轨道以释放麦克风
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordingStartTime = Date.now();
+                
+                // UI 更新
+                micBtn.classList.add('recording');
+                statusText.textContent = '正在录音... (点击停止)';
+                statusText.style.color = '#FF3B30';
+                resultDiv.textContent = '';
+                sendBtn.disabled = true;
+                recordedText = '';
+
+            } catch (err) {
+                console.error('无法访问麦克风:', err);
+                alert('无法访问麦克风，请检查权限。');
             }
 
         } else {
             // ===========================
             //      停止录音逻辑
             // ===========================
-            if (recognition) {
-                recognition.stop();
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                isRecording = false;
             }
-            isRecording = false;
-            
-            // 计算时长 (手动计算)
-            const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
-            recordedDuration = duration > 60 ? 60 : duration;
-
-            // UI 恢复
-            micBtn.classList.remove('recording');
-            statusText.textContent = '录音结束';
-            statusText.style.color = '#888';
-            
-            // 确保如果有字就能发
-            if (recordedText) sendBtn.disabled = false;
         }
     }
 
@@ -10317,6 +10433,10 @@ refreshButtons.forEach(btnId => {
         
         const contact = state.contacts.find(c => c.id === state.currentChatContactId);
         
+        // 获取图标 URL，如果 state 中没有则使用默认值
+        const editIconUrl = (state.meetingIcons && state.meetingIcons.edit) ? state.meetingIcons.edit : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTk5OTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTExIDRINFYyMmgxNFYxMSIvPjxwYXRoIGQ9Ik0xOC41IDIuNWEyLjEyMSAyLjEyMSAwIDAgMSAzIDNMMTIgMTVIOHYtNGw5LjUtOS41eiIvPjwvc3ZnPg==';
+        const deleteIconUrl = (state.meetingIcons && state.meetingIcons.delete) ? state.meetingIcons.delete : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYzQjMwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMyA2IDUgNiAyMSA2Ii8+PHBhdGggZD0iTTE5IDZ2MTRhMiAyIDAgMCAxLTIgMkg3YTIgMiAwIDAgMS0yLTJWNm0zIDBUNGEyIDIgMCAwIDEgMi0yaDRhMiAyIDAgMCAxIDIgMnYyIi8+PGxpbmUgeDE9IjEwIiB5MT0iMTEiIHgyPSIxMCIgeTI9IjE3Ii8+PGxpbmUgeDE9IjE0IiB5MT0iMTEiIHgyPSIxNCIgeTI9IjE3Ii8+PC9zdmc+';
+
         meeting.content.forEach((msg, index) => {
             const card = document.createElement('div');
             card.className = 'meeting-card';
@@ -10342,8 +10462,8 @@ refreshButtons.forEach(btnId => {
                 </div>
                 <div class="meeting-card-content">${msg.text}</div>
                 <div class="meeting-card-actions">
-                    <i class="fas fa-pen meeting-action-icon" onclick="window.editMeetingMsg(${index})" title="编辑"></i>
-                    <i class="fas fa-trash meeting-action-icon danger" onclick="window.deleteMeetingMsg(${index})" title="删除"></i>
+                    <img src="${editIconUrl}" class="meeting-action-icon" onclick="window.editMeetingMsg(${index})" title="编辑">
+                    <img src="${deleteIconUrl}" class="meeting-action-icon danger" onclick="window.deleteMeetingMsg(${index})" title="删除">
                 </div>
             `;
             container.appendChild(card);
@@ -10516,18 +10636,58 @@ refreshButtons.forEach(btnId => {
         }
     }
 
+    let currentEditingMeetingMsgIndex = null;
+
     window.editMeetingMsg = function(index) {
         if (!state.currentChatContactId || !state.currentMeetingId) return;
 
         const meeting = state.meetings[state.currentChatContactId].find(m => m.id === state.currentMeetingId);
         if (meeting) {
-            const newText = prompt('编辑内容:', meeting.content[index].text);
-            if (newText !== null && newText.trim() !== '') {
-                meeting.content[index].text = newText.trim();
+            currentEditingMeetingMsgIndex = index;
+            const content = meeting.content[index].text;
+            document.getElementById('edit-meeting-msg-content').value = content;
+            document.getElementById('edit-meeting-msg-modal').classList.remove('hidden');
+        }
+    }
+
+    // 绑定编辑弹窗事件
+    const closeEditMeetingMsgBtn = document.getElementById('close-edit-meeting-msg');
+    const saveEditMeetingMsgBtn = document.getElementById('save-edit-meeting-msg-btn');
+
+    if (closeEditMeetingMsgBtn) {
+        // 移除旧监听器
+        const newCloseBtn = closeEditMeetingMsgBtn.cloneNode(true);
+        closeEditMeetingMsgBtn.parentNode.replaceChild(newCloseBtn, closeEditMeetingMsgBtn);
+        
+        newCloseBtn.addEventListener('click', () => {
+            document.getElementById('edit-meeting-msg-modal').classList.add('hidden');
+            currentEditingMeetingMsgIndex = null;
+        });
+    }
+
+    if (saveEditMeetingMsgBtn) {
+        // 移除旧监听器
+        const newSaveBtn = saveEditMeetingMsgBtn.cloneNode(true);
+        saveEditMeetingMsgBtn.parentNode.replaceChild(newSaveBtn, saveEditMeetingMsgBtn);
+
+        newSaveBtn.addEventListener('click', () => {
+            if (currentEditingMeetingMsgIndex === null || !state.currentChatContactId || !state.currentMeetingId) return;
+
+            const newText = document.getElementById('edit-meeting-msg-content').value.trim();
+            if (!newText) {
+                alert('内容不能为空');
+                return;
+            }
+
+            const meeting = state.meetings[state.currentChatContactId].find(m => m.id === state.currentMeetingId);
+            if (meeting) {
+                meeting.content[currentEditingMeetingMsgIndex].text = newText;
                 saveConfig();
                 renderMeetingCards(meeting);
+                document.getElementById('edit-meeting-msg-modal').classList.add('hidden');
+                currentEditingMeetingMsgIndex = null;
             }
-        }
+        });
     }
 
     // ============================================================
