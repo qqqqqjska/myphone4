@@ -286,6 +286,41 @@
                     </div>
                 </div>
 
+                <!-- Minimax TTS 设置 -->
+                <div class="section-title">语音合成 (Minimax TTS) 全局配置</div>
+                <div class="ios-list-group">
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>Group ID</label>
+                            <input type="text" id="minimax-group-id" placeholder="Minimax Group ID">
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>API Key</label>
+                            <input type="password" id="minimax-api-key" placeholder="Minimax API Key">
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content column">
+                            <label>模型 (Model)</label>
+                            <input type="text" id="minimax-model" placeholder="speech-01-turbo" value="speech-01-turbo" style="margin-bottom: 10px;">
+                            <select id="minimax-model-select" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; background-color: #f2f2f7;">
+                                <option value="">-- 快速选择模型 --</option>
+                                <option value="speech-01-turbo">speech-01-turbo</option>
+                                <option value="speech-01-240228">speech-01-240228</option>
+                                <option value="speech-01">speech-01</option>
+                                <option value="speech-02">speech-02</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-content">
+                            <span style="font-size: 12px; color: #888;">提示：启用开关和音色设置已移至每个联系人的“聊天详情”页。</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 副 API 设置 -->
                 <div class="section-title">副 API 设置</div>
                 
@@ -533,6 +568,28 @@
                             </div>
                         </div>
 
+                        <div class="section-title">语音合成 (TTS)</div>
+                        <div class="ios-list-group">
+                            <div class="list-item">
+                                <div class="list-content">
+                                    <label>启用 TTS (Minimax)</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="chat-setting-tts-enabled">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-content column">
+                                    <label>音色 ID (Voice ID)</label>
+                                    <input type="text" id="chat-setting-tts-voice-id" placeholder="例如: male-qn-qingse">
+                                    <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                                        常用: male-qn-qingse (青涩), female-shaonv (少女), male-qn-jingying (精英)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="section-title">关联世界书</div>
                         <div class="ios-list-group" id="chat-setting-wb-list">
                             <!-- 世界书分类列表将通过JS生成 -->
@@ -753,6 +810,25 @@
                 </div>
             </div>
 
+            <!-- 视频/语音通话选择弹窗 -->
+            <div id="video-call-modal" class="modal hidden" style="z-index: 200; align-items: flex-end;">
+                <div class="modal-content" style="height: auto; border-radius: 12px 12px 0 0; width: 100%; max-width: 100%; background-color: transparent;">
+                    <div class="ios-list-group" style="margin: 0 10px; border-radius: 12px; overflow: hidden;">
+                        <div class="list-item center-content" id="start-voice-call-btn" style="background: white; border-bottom: 1px solid #eee; height: 56px;">
+                            <span style="font-size: 18px; color: #007AFF;">语音通话</span>
+                        </div>
+                        <div class="list-item center-content" id="start-video-call-btn" style="background: white; height: 56px;">
+                            <span style="font-size: 18px; color: #007AFF;">视频通话</span>
+                        </div>
+                    </div>
+                    <div class="ios-list-group" style="margin: 10px 10px 20px 10px; border-radius: 12px; overflow: hidden;">
+                        <div class="list-item center-content" id="cancel-video-call-btn" style="background: white; height: 56px;">
+                            <span style="font-size: 18px; font-weight: bold; color: #007AFF;">取消</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 转账弹窗 -->
             <div id="transfer-modal" class="modal hidden" style="z-index: 200; align-items: center;">
                 <div class="modal-content" style="height: auto; border-radius: 12px; width: 85%; max-width: 320px; background-color: #fff;">
@@ -894,7 +970,7 @@
                         <div class="more-icon"><i class="fas fa-camera"></i></div>
                         <div class="more-label">拍摄</div>
                     </div>
-                    <div class="more-item">
+                    <div class="more-item" id="chat-more-video-call-btn">
                         <div class="more-icon"><i class="fas fa-video"></i></div>
                         <div class="more-label">视频通话</div>
                     </div>
@@ -1079,6 +1155,76 @@
             </div>
             <!-- 隐藏的文件输入框，用于个人朋友圈背景修改 -->
             <input type="file" id="personal-moments-bg-input" accept="image/*" class="file-input-hidden">
+        </div>
+
+        <!-- 语音通话悬浮窗 -->
+        <div id="voice-call-float" class="voice-call-float hidden">
+            <div class="float-icon"><i class="fas fa-phone"></i></div>
+            <div class="float-info">
+                <div class="float-status">通话中</div>
+                <div class="float-time" id="float-call-time">00:00</div>
+            </div>
+        </div>
+
+        <!-- 语音通话全屏页 -->
+        <div id="voice-call-screen" class="app-screen hidden" style="z-index: 300; background-color: #000;">
+            <!-- 背景层 -->
+            <div id="voice-call-bg" class="voice-call-bg"></div>
+            <div class="voice-call-overlay"></div>
+            
+            <!-- 隐藏的文件输入框，用于更换通话背景 -->
+            <input type="file" id="voice-call-bg-input" accept="image/*" class="file-input-hidden">
+
+            <!-- 顶部控制栏 -->
+            <div class="voice-call-header">
+                <button id="voice-call-minimize-btn" class="icon-btn-white"><i class="fas fa-compress-alt"></i></button>
+                <div class="voice-call-time" id="voice-call-time">00:00</div>
+                <button id="voice-call-add-btn" class="icon-btn-white"><i class="fas fa-plus"></i></button>
+            </div>
+
+            <!-- 中间头像区域 -->
+            <div class="voice-call-avatar-container">
+                <div class="voice-call-avatar-wrapper">
+                    <img id="voice-call-avatar" src="" alt="Avatar">
+                </div>
+                <div class="voice-call-name" id="voice-call-name">用户名</div>
+                <div class="voice-call-status" id="voice-call-status">正在通话中...</div>
+            </div>
+
+            <!-- 对话显示区域 -->
+            <div class="voice-call-content-container" id="voice-call-content">
+                <!-- 对话内容将通过JS动态插入 -->
+            </div>
+
+            <!-- 底部输入框 -->
+            <div class="voice-call-input-area">
+                <input type="text" id="voice-call-input" placeholder="发送消息...">
+                <button id="voice-call-send-btn"><i class="fas fa-arrow-up"></i></button>
+            </div>
+
+            <!-- 底部控制栏 -->
+            <div class="voice-call-footer">
+                <div class="voice-call-action-item">
+                    <button id="voice-call-mic-btn" class="voice-action-btn white active">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <span>麦克风已开</span>
+                </div>
+                
+                <div class="voice-call-action-item">
+                    <button id="voice-call-hangup-btn" class="voice-action-btn red">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                    <span>挂断</span>
+                </div>
+
+                <div class="voice-call-action-item">
+                    <button id="voice-call-speaker-btn" class="voice-action-btn dark">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <span>扬声器已关</span>
+                </div>
+            </div>
         </div>
 
         <!-- 位置/行程全屏App -->

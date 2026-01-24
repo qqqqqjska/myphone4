@@ -43,6 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
             key: '',
             model: 'whisper-1'
         },
+        minimaxSettings: {
+            url: 'https://api.minimax.chat/v1/t2a_v2',
+            key: '',
+            groupId: '',
+            model: 'speech-01-turbo'
+        },
         chatWallpapers: [], // { id, data }
         tempSelectedChatBg: null, // 临时存储聊天设置中选中的背景
         tempSelectedGroup: null, // 临时存储聊天设置中选中的分组
@@ -249,6 +255,19 @@ let currentEditingChatMsgId = null;
         } else {
             alert(`${appName || '应用'} 功能开发中...`);
         }
+    }
+
+    // 应用所有配置
+    function applyConfig() {
+        applyFont(state.currentFont);
+        if (state.currentMeetingFont) {
+            applyMeetingFont(state.currentMeetingFont);
+        }
+        applyWallpaper(state.currentWallpaper);
+        applyIcons();
+        applyCSS(state.css);
+        applyMeetingCss(state.meetingCss);
+        toggleStatusBar(state.showStatusBar);
     }
 
     // 初始化
@@ -966,8 +985,8 @@ let currentEditingChatMsgId = null;
             // 点击面板内的项目
             chatMorePanel.querySelectorAll('.more-item').forEach(item => {
                 item.addEventListener('click', (e) => {
-                    // 如果是照片、拍摄、转账、记忆、位置、重回或语音按钮，不执行通用逻辑（由单独的监听器处理）
-                    if (item.id === 'chat-more-photo-btn' || item.id === 'chat-more-camera-btn' || item.id === 'chat-more-transfer-btn' || item.id === 'chat-more-memory-btn' || item.id === 'chat-more-location-btn' || item.id === 'chat-more-regenerate-btn' || item.id === 'chat-more-voice-btn') return;
+                    // 如果是照片、拍摄、转账、记忆、位置、重回、语音或视频通话按钮，不执行通用逻辑（由单独的监听器处理）
+                    if (item.id === 'chat-more-photo-btn' || item.id === 'chat-more-camera-btn' || item.id === 'chat-more-transfer-btn' || item.id === 'chat-more-memory-btn' || item.id === 'chat-more-location-btn' || item.id === 'chat-more-regenerate-btn' || item.id === 'chat-more-voice-btn' || item.id === 'chat-more-video-call-btn') return;
                     
                     e.stopPropagation();
                     const label = item.querySelector('.more-label').textContent;
@@ -1092,7 +1111,8 @@ let currentEditingChatMsgId = null;
                 const voiceData = {
                     duration: recordedDuration || 1,
                     text: recordedText,
-                    isReal: true
+                    isReal: true,
+                    audio: recordedAudio // 修复：添加音频数据
                 };
 
                 sendMessage(JSON.stringify(voiceData), true, 'voice');
@@ -1282,6 +1302,9 @@ let currentEditingChatMsgId = null;
         // Whisper 设置相关
         setupWhisperListeners();
 
+        // Minimax 设置相关
+        setupMinimaxListeners();
+
         // 通用设置
         const defaultVirtualImageUrlInput = document.getElementById('default-virtual-image-url');
         if (defaultVirtualImageUrlInput) {
@@ -1381,6 +1404,41 @@ let currentEditingChatMsgId = null;
         const chatMoreCameraBtn = document.getElementById('chat-more-camera-btn');
         if (chatMoreCameraBtn) {
             chatMoreCameraBtn.addEventListener('click', handleChatCamera);
+        }
+
+        // 视频通话功能
+        const chatMoreVideoCallBtn = document.getElementById('chat-more-video-call-btn');
+        const videoCallModal = document.getElementById('video-call-modal');
+        const startVoiceCallBtn = document.getElementById('start-voice-call-btn');
+        const startVideoCallBtn = document.getElementById('start-video-call-btn');
+        const cancelVideoCallBtn = document.getElementById('cancel-video-call-btn');
+
+        if (chatMoreVideoCallBtn) {
+            chatMoreVideoCallBtn.addEventListener('click', () => {
+                document.getElementById('chat-more-panel').classList.add('hidden');
+                videoCallModal.classList.remove('hidden');
+            });
+        }
+
+        if (cancelVideoCallBtn) {
+            cancelVideoCallBtn.addEventListener('click', () => {
+                videoCallModal.classList.add('hidden');
+            });
+        }
+
+        if (startVoiceCallBtn) {
+            startVoiceCallBtn.addEventListener('click', () => {
+                videoCallModal.classList.add('hidden');
+                // sendMessage('[邀请你进行语音通话]', true, 'text'); // 不再发送文本消息
+                openVoiceCallScreen();
+            });
+        }
+
+        if (startVideoCallBtn) {
+            startVideoCallBtn.addEventListener('click', () => {
+                videoCallModal.classList.add('hidden');
+                sendMessage('[邀请你进行视频通话]', true, 'text');
+            });
         }
 
         // 记忆功能
@@ -2909,6 +2967,154 @@ let currentEditingChatMsgId = null;
                     state.whisperSettings.model = selectedModel;
                 }
             });
+        }
+    }
+
+    function setupMinimaxListeners() {
+        const groupIdInput = document.getElementById('minimax-group-id');
+        const apiKeyInput = document.getElementById('minimax-api-key');
+        const modelInput = document.getElementById('minimax-model');
+        const modelSelect = document.getElementById('minimax-model-select');
+
+        if (groupIdInput) {
+            groupIdInput.value = state.minimaxSettings.groupId || '';
+            groupIdInput.addEventListener('change', (e) => {
+                state.minimaxSettings.groupId = e.target.value;
+            });
+        }
+
+        if (apiKeyInput) {
+            apiKeyInput.value = state.minimaxSettings.key || '';
+            apiKeyInput.addEventListener('change', (e) => {
+                state.minimaxSettings.key = e.target.value;
+            });
+        }
+
+        if (modelInput) {
+            modelInput.value = state.minimaxSettings.model || 'speech-01-turbo';
+            modelInput.addEventListener('change', (e) => {
+                state.minimaxSettings.model = e.target.value;
+                // 如果输入的值在下拉框中存在，同步选中
+                if (modelSelect) {
+                    modelSelect.value = e.target.value;
+                }
+            });
+        }
+
+        if (modelSelect) {
+            // 初始化选中状态
+            if (state.minimaxSettings.model) {
+                modelSelect.value = state.minimaxSettings.model;
+            }
+            
+            modelSelect.addEventListener('change', (e) => {
+                const selectedModel = e.target.value;
+                if (selectedModel) {
+                    if (modelInput) modelInput.value = selectedModel;
+                    state.minimaxSettings.model = selectedModel;
+                }
+            });
+        }
+    }
+
+    async function generateMinimaxTTS(text, voiceId) {
+        const settings = state.minimaxSettings;
+        
+        // 调试日志
+        console.log('Generating Minimax TTS...', {
+            url: settings.url,
+            hasKey: !!settings.key,
+            groupId: settings.groupId,
+            model: settings.model,
+            text: text,
+            voiceId: voiceId
+        });
+
+        if (!settings.key) {
+            alert('Minimax API Key 未配置');
+            return null;
+        }
+        
+        // GroupID 检查：虽然通常需要，但我们尝试允许为空，看看 API 是否能处理（或者用户填在 URL 里了？）
+        let url = settings.url;
+        if (settings.groupId) {
+            // 检查 URL 是否已有参数
+            const separator = url.includes('?') ? '&' : '?';
+            url = `${url}${separator}GroupId=${settings.groupId}`;
+        } else {
+            console.warn('Minimax GroupID is empty. Request might fail.');
+        }
+
+        try {
+            console.log('Requesting Minimax TTS URL:', url);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${settings.key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: settings.model || 'speech-01-turbo',
+                    text: text,
+                    stream: false,
+                    voice_setting: {
+                        voice_id: voiceId || 'male-qn-qingse',
+                        speed: 1.0,
+                        vol: 1.0,
+                        pitch: 0
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error(`Minimax API HTTP Error: ${response.status}`, errText);
+                alert(`语音生成失败 (HTTP ${response.status}): ${errText}`);
+                return null;
+            }
+
+            const data = await response.json();
+            console.log('Minimax API Response:', data);
+
+            if (data.base_resp && data.base_resp.status_code !== 0) {
+                console.error('Minimax API returned error:', data.base_resp);
+                alert(`语音生成API错误: ${data.base_resp.status_msg} (Code: ${data.base_resp.status_code})`);
+                return null;
+            }
+            
+            // Minimax T2A v2 返回的 data.data.audio 是 hex string
+            if (data.data && data.data.audio) {
+                const hexAudio = data.data.audio;
+                // 将 hex 转为 base64
+                const match = hexAudio.match(/.{1,2}/g);
+                if (!match) {
+                     console.error('Invalid hex audio data');
+                     return null;
+                }
+                const bytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
+                
+                // 使用 Blob 和 FileReader 转换，避免大字符串栈溢出
+                const blob = new Blob([bytes], { type: 'audio/mp3' });
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } else if (data.base64) {
+                return `data:audio/mp3;base64,${data.base64}`;
+            } else if (data.audio) {
+                 return `data:audio/mp3;base64,${data.audio}`;
+            } else {
+                console.error('Minimax response format unknown:', JSON.stringify(data));
+                alert('语音生成失败：未知的响应格式，请检查控制台日志');
+                return null;
+            }
+
+        } catch (error) {
+            console.error('Minimax TTS generation failed:', error);
+            alert(`语音生成异常: ${error.message}`);
+            return null;
         }
     }
 
@@ -4954,6 +5160,11 @@ JSON格式示例：
         document.getElementById('chat-setting-show-thought').checked = contact.showThought || false;
         document.getElementById('chat-setting-thought-visible').checked = contact.thoughtVisible || false;
         document.getElementById('chat-setting-real-time-visible').checked = contact.realTimeVisible || false;
+        
+        // 填充 TTS 设置
+        document.getElementById('chat-setting-tts-enabled').checked = contact.ttsEnabled || false;
+        document.getElementById('chat-setting-tts-voice-id').value = contact.ttsVoiceId || 'male-qn-qingse';
+
         // 清空文件输入
         document.getElementById('chat-setting-avatar').value = '';
         document.getElementById('chat-setting-my-avatar').value = '';
@@ -5165,6 +5376,8 @@ JSON格式示例：
         const showThought = document.getElementById('chat-setting-show-thought').checked;
         const thoughtVisible = document.getElementById('chat-setting-thought-visible').checked;
         const realTimeVisible = document.getElementById('chat-setting-real-time-visible').checked;
+        const ttsEnabled = document.getElementById('chat-setting-tts-enabled').checked;
+        const ttsVoiceId = document.getElementById('chat-setting-tts-voice-id').value;
         const userPersonaId = document.getElementById('chat-setting-user-persona').value;
         const avatarInput = document.getElementById('chat-setting-avatar');
         const aiBgInput = document.getElementById('chat-setting-ai-bg-input');
@@ -5199,6 +5412,8 @@ JSON格式示例：
         contact.showThought = showThought;
         contact.thoughtVisible = thoughtVisible;
         contact.realTimeVisible = realTimeVisible;
+        contact.ttsEnabled = ttsEnabled;
+        contact.ttsVoiceId = ttsVoiceId;
         contact.userPersonaId = userPersonaId ? parseInt(userPersonaId) : null;
         contact.customCss = customCss;
         document.getElementById('chat-title').textContent = remark || contact.name;
@@ -5409,8 +5624,39 @@ JSON格式示例：
             }
         }
 
+        // 隐藏语音通话消息
+        if (type === 'voice_call_text') {
+            return;
+        }
+
         const container = document.getElementById('chat-messages');
+        
+        // 检查是否需要插入时间戳 (间隔超过5分钟)
+        const lastMsg = container.lastElementChild;
+        let showTimestamp = false;
+        const now = Date.now();
+        
+        // 如果是第一条消息，或者上一条是系统消息，或者距离上一条消息超过5分钟
+        if (!lastMsg || lastMsg.classList.contains('system') || !lastMsg.dataset.time) {
+            showTimestamp = true;
+        } else {
+            const lastTime = parseInt(lastMsg.dataset.time);
+            if (now - lastTime > 5 * 60 * 1000) {
+                showTimestamp = true;
+            }
+        }
+
+        if (showTimestamp) {
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'chat-time-stamp';
+            const date = new Date();
+            const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            timeDiv.innerHTML = `<span>${timeStr}</span>`;
+            container.appendChild(timeDiv);
+        }
+
         const msgDiv = document.createElement('div');
+        msgDiv.dataset.time = now; // 记录消息时间戳
         
         // 检查是否为系统消息
         let isSystemMsg = false;
@@ -5629,6 +5875,11 @@ JSON格式示例：
             `;
         }
 
+        // 消息旁的时间
+        const date = new Date();
+        const msgTimeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        const timeHtml = `<div class="msg-time">${msgTimeStr}</div>`;
+
         if (!isUser) {
             const avatar = contact ? contact.avatar : '';
             msgDiv.innerHTML = `
@@ -5637,6 +5888,7 @@ JSON格式示例：
                     <div class="message-content ${extraClass}">${contentHtml}</div>
                     ${replyHtml}
                 </div>
+                ${timeHtml}
             `;
         } else {
             let myAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
@@ -5656,6 +5908,7 @@ JSON格式示例：
                     <div class="message-content ${extraClass}">${contentHtml}</div>
                     ${replyHtml}
                 </div>
+                ${timeHtml}
             `;
         }
         
@@ -5813,16 +6066,32 @@ JSON格式示例：
     }
 
     function handleMessageLongPress(e, content, isUser, type, msgId) {
-        // 获取坐标
-        let x, y;
-        if (e.type === 'touchstart') {
-            x = e.touches[0].clientX;
-            y = e.touches[0].clientY;
-        } else {
-            x = e.clientX;
-            y = e.clientY;
+        // 阻止默认菜单
+        if (e.type === 'contextmenu') {
+            e.preventDefault();
         }
         
+        // 获取触发元素：尝试找到 .message-content
+        let target = e.target;
+        // 向上查找直到找到 message-content
+        while (target && !target.classList.contains('message-content')) {
+            target = target.parentElement;
+            if (!target || target === document.body) break; 
+        }
+        
+        if (!target) {
+            // 如果没找到气泡，尝试从事件坐标获取元素（针对 touch 事件可能 target 不准确的情况）
+            if (e.type === 'touchstart' && e.touches && e.touches[0]) {
+                const touch = e.touches[0];
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (el) {
+                    target = el.closest('.message-content');
+                }
+            }
+        }
+
+        if (!target) return; // 无法定位气泡，不显示菜单
+
         // 获取名字
         const contact = state.contacts.find(c => c.id === state.currentChatContactId);
         let name = 'AI';
@@ -5838,10 +6107,10 @@ JSON格式示例：
             name = contact ? (contact.remark || contact.name) : 'AI';
         }
 
-        showContextMenu(x, y, { content, name, isUser, type, msgId });
+        showContextMenu(target, { content, name, isUser, type, msgId });
     }
 
-    function showContextMenu(x, y, msgData) {
+    function showContextMenu(targetEl, msgData) {
         // 移除旧菜单
         const oldMenu = document.querySelector('.context-menu');
         if (oldMenu) oldMenu.remove();
@@ -5855,16 +6124,48 @@ JSON格式示例：
             <div class="context-menu-item" id="menu-delete" style="color: #ff3b30;">删除</div>
         `;
         
-        // 调整位置，防止溢出屏幕
-        const menuWidth = 150; // 估算宽度
-        if (x + menuWidth > window.innerWidth) {
-            x = window.innerWidth - menuWidth - 10;
+        // 先插入 DOM 以获取尺寸，设为不可见
+        menu.style.visibility = 'hidden';
+        document.body.appendChild(menu);
+        
+        const menuRect = menu.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const gap = 10; // 间距
+        
+        let left, top;
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+
+        if (msgData.isUser) {
+            // 用户消息（右侧），菜单在左边
+            left = targetRect.left - menuRect.width - gap + scrollX;
+        } else {
+            // AI 消息（左侧），菜单在右边
+            left = targetRect.right + gap + scrollX;
         }
         
-        menu.style.left = `${x}px`;
-        menu.style.top = `${y}px`;
+        // 顶部对齐
+        top = targetRect.top + scrollY;
         
-        document.body.appendChild(menu);
+        // 边界检查：如果水平放不下，就放上面
+        if (left < 0 || left + menuRect.width > window.innerWidth) {
+             // 居中显示在气泡上方
+             left = targetRect.left + (targetRect.width - menuRect.width) / 2 + scrollX;
+             top = targetRect.top - menuRect.height - gap + scrollY;
+             
+             // 如果上方也放不下（太靠顶），放下面
+             if (top < scrollY) {
+                 top = targetRect.bottom + gap + scrollY;
+             }
+        }
+        
+        // 确保不超出左右边界
+        if (left < 0) left = 10;
+        if (left + menuRect.width > window.innerWidth) left = window.innerWidth - menuRect.width - 10;
+
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+        menu.style.visibility = 'visible';
         
         // 绑定事件
         menu.querySelector('#menu-quote').onclick = () => {
@@ -6265,9 +6566,22 @@ ${itineraryContext}
         }
 
         // 处理上下文限制
-        let contextMessages = history;
-        if (contact.contextLimit && contact.contextLimit > 0) {
-            contextMessages = history.slice(-contact.contextLimit);
+        // 默认限制为最近 50 条，防止 Token 爆炸
+        let limit = contact.contextLimit && contact.contextLimit > 0 ? contact.contextLimit : 50;
+        let contextMessages = history.slice(-limit);
+
+        // 预处理：限制发送给 AI 的图片数量，防止 Base64 导致 Token 超限
+        // 只保留最近 3 张图片，其余替换为文本占位符
+        let imageCount = 0;
+        // 倒序遍历计数
+        for (let i = contextMessages.length - 1; i >= 0; i--) {
+            if (contextMessages[i].type === 'image') {
+                imageCount++;
+                if (imageCount > 3) {
+                    // 标记为不发送图片数据
+                    contextMessages[i]._skipImage = true;
+                }
+            }
         }
 
         const messages = [
@@ -6280,6 +6594,10 @@ ${itineraryContext}
                 }
 
                 if (h.type === 'image') {
+                    // 如果被标记跳过，或者内容不是 base64/url (容错)，则发送文本
+                    if (h._skipImage) {
+                        return { role: h.role, content: '[图片]' };
+                    }
                     return {
                         role: h.role,
                         content: [
@@ -6296,7 +6614,43 @@ ${itineraryContext}
                         role: h.role,
                         content: `[发送了一个表情包：${h.description}]`
                     };
+                } else if (h.type === 'voice') {
+                    // 解析语音消息内容，避免将 JSON 直接传给 AI
+                    let voiceText = '语音消息';
+                    try {
+                        const data = JSON.parse(h.content);
+                        voiceText = data.text || '语音消息';
+                    } catch (e) {
+                        voiceText = h.content;
+                    }
+                    return {
+                        role: h.role,
+                        content: `[发送了一条语音：${voiceText}]`
+                    };
+                } else if (h.type === 'voice_call_text') {
+                    // 【关键修复】过滤语音通话消息中的音频数据
+                    let callText = '通话内容';
+                    try {
+                        const data = JSON.parse(h.content);
+                        callText = data.text || '通话内容';
+                    } catch(e) {
+                        callText = h.content;
+                    }
+                    return { role: h.role, content: callText };
                 } else {
+                    // 对于普通文本消息，也要防止它是 JSON 格式的转账等特殊消息残留
+                    if (typeof content === 'string' && (content.startsWith('{') || content.startsWith('['))) {
+                         try {
+                             // 尝试解析，如果是转账等对象，提取文本描述
+                             // 这里简单处理，如果是复杂对象，直接转为 "[特殊消息]" 避免报错
+                             // 但为了兼容性，如果解析失败就原样发送
+                             // 主要针对 transfer
+                             if (h.type === 'transfer') {
+                                 const data = JSON.parse(content);
+                                 return { role: h.role, content: `[转账: ${data.amount}元]` };
+                             }
+                         } catch(e) {}
+                    }
                     return { role: h.role, content: content };
                 }
             })
@@ -6576,23 +6930,36 @@ ${itineraryContext}
                     }
                     processedSegment = processedSegment.replace(sendStickerMatch[0], '');
                 }
-                                // === 插入点 2：解析 AI 语音指令 ===
+                // === 插入点 2：解析 AI 语音指令 ===
                 const sendVoiceRegex = /ACTION:\s*SEND_VOICE:\s*(\d+)\s*(.*?)(?:\n|$)/;
                 let sendVoiceMatch;
                 while ((sendVoiceMatch = processedSegment.match(sendVoiceRegex)) !== null) {
                     const duration = sendVoiceMatch[1];
                     const text = sendVoiceMatch[2].trim();
                     if (text) {
-                        // 构造语音数据
-                        const voiceData = {
-                            duration: parseInt(duration),
-                            text: text,
-                            isReal: false
-                        };
-                        // 延迟 1.5秒 发送，模拟录音过程
-                        setTimeout(() => {
-                            sendMessage(JSON.stringify(voiceData), false, 'voice');
-                        }, 1500);
+                        // 尝试生成 TTS
+                        // 使用闭包保存当前文本和时长
+                        (async (d, t) => {
+                            let audioData = null;
+                            // 检查当前联系人是否启用了 TTS
+                            if (contact.ttsEnabled) {
+                                // 显示正在生成语音的提示（可选，这里简单处理）
+                                console.log('正在生成 Minimax 语音...');
+                                audioData = await generateMinimaxTTS(t, contact.ttsVoiceId);
+                            }
+
+                            // 延迟发送，模拟录音过程
+                            setTimeout(() => {
+                                // 构造语音消息数据，初始不包含音频数据
+                                const voiceData = {
+                                    duration: parseInt(d),
+                                    text: t,
+                                    isReal: false,
+                                    audio: null // 初始为空，点击播放时生成
+                                };
+                                sendMessage(JSON.stringify(voiceData), false, 'voice');
+                            }, 1500);
+                        })(duration, text);
                     }
                     processedSegment = processedSegment.replace(sendVoiceMatch[0], '');
                 }
@@ -8575,6 +8942,7 @@ if (resetFontBtn) {
                 if (!state.aiSettings2) state.aiSettings2 = { url: '', key: '', model: '', temperature: 0.7 };
                 if (!state.aiPresets2) state.aiPresets2 = [];
                 if (!state.whisperSettings) state.whisperSettings = { url: '', key: '', model: 'whisper-1' };
+                if (!state.minimaxSettings) state.minimaxSettings = { url: 'https://api.minimax.chat/v1/t2a_v2', key: '', groupId: '', model: 'speech-01-turbo' };
                 if (!state.chatWallpapers) state.chatWallpapers = [];
                 if (!state.contacts) state.contacts = [];
                 if (!state.chatHistory) state.chatHistory = {};
@@ -8657,6 +9025,7 @@ if (resetFontBtn) {
                 updateAiUi();
                 updateAiUi(true);
                 setupWhisperListeners(); // 重新初始化 Whisper 监听器以填充值
+                setupMinimaxListeners(); // 初始化 Minimax 监听器
                 renderContactList();
                 migrateWorldbookData();
                 renderWorldbookCategoryList();
@@ -10250,6 +10619,18 @@ refreshButtons.forEach(btnId => {
     let recordedText = '';
     let recordedAudio = null; // 新增：存储录音数据的 Base64
 
+    // 语音通话 VAD 相关变量
+    let voiceCallAudioContext = null;
+    let voiceCallAnalyser = null;
+    let voiceCallMicrophone = null;
+    let voiceCallScriptProcessor = null;
+    let voiceCallMediaRecorder = null;
+    let voiceCallChunks = [];
+    let voiceCallIsSpeaking = false;
+    let voiceCallSilenceStart = 0;
+    let voiceCallVadInterval = null;
+    let voiceCallIsRecording = false;
+
     // 3. 切换录音状态 (使用 MediaRecorder + Whisper API)
     async function toggleVoiceRecording() {
         const micBtn = document.getElementById('voice-mic-btn');
@@ -10284,12 +10665,13 @@ refreshButtons.forEach(btnId => {
                     const duration = Math.ceil((Date.now() - recordingStartTime) / 1000);
                     recordedDuration = duration > 60 ? 60 : duration;
 
-                    // 将音频转换为 Base64 保存
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        recordedAudio = reader.result;
-                    };
+                    // 将音频转换为 Base64 保存 (使用 Promise 确保完成)
+                    recordedAudio = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(audioBlob);
+                    });
+                    console.log('Audio processed, length:', recordedAudio ? recordedAudio.length : 0);
 
                     // UI 更新
                     micBtn.classList.remove('recording');
@@ -10391,6 +10773,625 @@ refreshButtons.forEach(btnId => {
         document.getElementById('voice-input-modal').classList.add('hidden');
     }
     // === 插入点 4 结束 ===
+    // --- 语音通话功能 ---
+    let voiceCallTimer = null;
+    let voiceCallSeconds = 0;
+    let currentVoiceCallStartTime = 0;
+    let voiceCallStartIndex = 0;
+
+    function openVoiceCallScreen() {
+        if (!state.currentChatContactId) return;
+        const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        if (!contact) return;
+
+        // 记录开始状态
+        if (!state.chatHistory[state.currentChatContactId]) {
+            state.chatHistory[state.currentChatContactId] = [];
+        }
+        voiceCallStartIndex = state.chatHistory[state.currentChatContactId].length;
+        currentVoiceCallStartTime = Date.now();
+
+        const screen = document.getElementById('voice-call-screen');
+        const avatar = document.getElementById('voice-call-avatar');
+        const name = document.getElementById('voice-call-name');
+        const bg = document.getElementById('voice-call-bg');
+        const timeEl = document.getElementById('voice-call-time');
+        const contentContainer = document.getElementById('voice-call-content');
+
+        // 初始化信息
+        avatar.src = contact.avatar;
+        name.textContent = contact.remark || contact.name;
+        
+        // 背景图：优先使用通话背景，否则使用聊天背景，否则默认
+        if (contact.voiceCallBg) {
+            bg.style.backgroundImage = `url(${contact.voiceCallBg})`;
+        } else if (contact.chatBg) {
+            bg.style.backgroundImage = `url(${contact.chatBg})`;
+        } else {
+            // 默认背景，可以使用一个渐变或默认图
+            bg.style.backgroundImage = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+        }
+
+        // 重置状态
+        voiceCallSeconds = 0;
+        timeEl.textContent = '00:00';
+        contentContainer.innerHTML = ''; // 清空对话
+        document.getElementById('voice-call-status').textContent = '正在通话中...';
+        
+        // 显示界面
+        screen.classList.remove('hidden');
+
+        // 开始计时
+        if (voiceCallTimer) clearInterval(voiceCallTimer);
+        
+        const updateTime = () => {
+            const mins = Math.floor(voiceCallSeconds / 60).toString().padStart(2, '0');
+            const secs = (voiceCallSeconds % 60).toString().padStart(2, '0');
+            const timeStr = `${mins}:${secs}`;
+            
+            if (timeEl) timeEl.textContent = timeStr;
+            
+            // 同步更新悬浮窗时间
+            const floatTimeEl = document.getElementById('float-call-time');
+            if (floatTimeEl) floatTimeEl.textContent = timeStr;
+        };
+        
+        // 立即更新一次
+        updateTime();
+
+        voiceCallTimer = setInterval(() => {
+            voiceCallSeconds++;
+            updateTime();
+        }, 1000);
+
+        // 绑定背景上传
+        const bgInput = document.getElementById('voice-call-bg-input');
+        // 移除旧监听器
+        const newBg = bg.cloneNode(true);
+        bg.parentNode.replaceChild(newBg, bg);
+        newBg.onclick = () => bgInput.click();
+        
+        // 移除旧监听器
+        const newBgInput = bgInput.cloneNode(true);
+        bgInput.parentNode.replaceChild(newBgInput, bgInput);
+        newBgInput.onchange = (e) => handleVoiceCallBgUpload(e, contact);
+
+        // 绑定按钮事件
+        const hangupBtn = document.getElementById('voice-call-hangup-btn');
+        const minimizeBtn = document.getElementById('voice-call-minimize-btn');
+        const addBtn = document.getElementById('voice-call-add-btn');
+
+        // 移除旧监听器
+        const newHangupBtn = hangupBtn.cloneNode(true);
+        hangupBtn.parentNode.replaceChild(newHangupBtn, hangupBtn);
+        newHangupBtn.onclick = () => closeVoiceCallScreen('user');
+
+        const newMinimizeBtn = minimizeBtn.cloneNode(true);
+        minimizeBtn.parentNode.replaceChild(newMinimizeBtn, minimizeBtn);
+        newMinimizeBtn.onclick = minimizeVoiceCallScreen;
+
+        const newAddBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+        newAddBtn.onclick = () => alert('添加成员功能开发中...');
+        
+        // 悬浮窗点击恢复
+        const floatWindow = document.getElementById('voice-call-float');
+        if (floatWindow) {
+            // floatWindow.onclick = restoreVoiceCallScreen; // 移除直接绑定，改由 makeDraggable 处理
+            makeDraggable(floatWindow, restoreVoiceCallScreen);
+        }
+
+        // 麦克风和扬声器切换
+        const micBtn = document.getElementById('voice-call-mic-btn');
+        // 移除旧监听器
+        const newMicBtn = micBtn.cloneNode(true);
+        micBtn.parentNode.replaceChild(newMicBtn, micBtn);
+
+        newMicBtn.onclick = () => {
+            newMicBtn.classList.toggle('active');
+            const span = newMicBtn.nextElementSibling;
+            const isActive = newMicBtn.classList.contains('active');
+            span.textContent = isActive ? '麦克风已开' : '麦克风已关';
+
+            if (isActive) {
+                startVoiceCallVAD();
+            } else {
+                stopVoiceCallVAD();
+            }
+        };
+
+        const speakerBtn = document.getElementById('voice-call-speaker-btn');
+        speakerBtn.onclick = () => {
+            speakerBtn.classList.toggle('active');
+            const span = speakerBtn.nextElementSibling;
+            span.textContent = speakerBtn.classList.contains('active') ? '扬声器已开' : '扬声器已关';
+        };
+
+        // 发送消息
+        const sendBtn = document.getElementById('voice-call-send-btn');
+        const input = document.getElementById('voice-call-input');
+        
+        // 移除旧监听器
+        const newSendBtn = sendBtn.cloneNode(true);
+        sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+        
+        const handleSend = () => {
+            const text = input.value.trim();
+            if (text) {
+                input.value = '';
+                // 使用特殊类型 voice_call_text，使其在聊天页面隐藏
+                sendMessage(text, true, 'voice_call_text');
+                // 触发 AI 回复
+                generateVoiceCallAiReply();
+            }
+        };
+
+        newSendBtn.onclick = handleSend;
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') handleSend();
+        };
+    }
+
+    function closeVoiceCallScreen(hangupType = 'user') {
+        const screen = document.getElementById('voice-call-screen');
+        const floatWindow = document.getElementById('voice-call-float');
+        
+        screen.classList.add('hidden');
+        if (floatWindow) floatWindow.classList.add('hidden');
+        
+        if (voiceCallTimer) clearInterval(voiceCallTimer);
+        voiceCallTimer = null;
+
+        // 停止 VAD
+        stopVoiceCallVAD();
+
+        // 计算通话时长
+        const duration = Math.ceil((Date.now() - currentVoiceCallStartTime) / 1000);
+        const mins = Math.floor(duration / 60).toString().padStart(2, '0');
+        const secs = (duration % 60).toString().padStart(2, '0');
+        const timeStr = `${mins}:${secs}`;
+
+        // 发送通话时长消息
+        // hangupType: 'user' (用户挂断, isUser=true) 或 'ai' (AI挂断, isUser=false)
+        const isUserHangup = hangupType === 'user';
+        sendMessage(`通话时长：${timeStr}`, isUserHangup, 'text');
+
+        // 触发通话总结
+        summarizeVoiceCall(state.currentChatContactId, voiceCallStartIndex);
+    }
+
+    async function summarizeVoiceCall(contactId, startIndex) {
+        const contact = state.contacts.find(c => c.id === contactId);
+        if (!contact) return;
+
+        const settings = state.aiSettings2.url ? state.aiSettings2 : state.aiSettings;
+        if (!settings.url || !settings.key) return;
+
+        const history = state.chatHistory[contactId] || [];
+        // 获取通话期间的消息
+        const callMessages = history.slice(startIndex);
+        
+        // 过滤出通话内容 (voice_call_text)
+        const callContent = callMessages
+            .filter(m => m.type === 'voice_call_text')
+            .map(m => {
+                let text = m.content;
+                try {
+                    const data = JSON.parse(m.content);
+                    if (data.text) text = data.text;
+                } catch(e) {}
+                return `${m.role === 'user' ? '用户' : contact.name}: ${text}`;
+            })
+            .join('\n');
+
+        if (!callContent) return;
+
+        showNotification('正在总结通话...');
+
+        const systemPrompt = `你是一个通话记录总结助手。
+请阅读以下一段语音通话的文字记录，并生成一段简练的通话摘要。
+摘要应该是陈述句，概括聊了什么主要内容。
+不要包含“通话记录显示”、“用户说”等前缀，直接陈述事实。
+请将摘要控制在 100 字以内。`;
+
+        try {
+            let fetchUrl = settings.url;
+            if (!fetchUrl.endsWith('/chat/completions')) {
+                fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'chat/completions' : fetchUrl + '/chat/completions';
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${settings.key}`
+                },
+                body: JSON.stringify({
+                    model: settings.model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: callContent }
+                    ],
+                    temperature: 0.5
+                })
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            const data = await response.json();
+            let summary = data.choices[0].message.content.trim();
+            
+            if (summary) {
+                // 添加到记忆
+                state.memories.push({
+                    id: Date.now(),
+                    contactId: contact.id,
+                    content: `【通话回忆】 ${summary}`,
+                    time: Date.now(),
+                    range: '语音通话'
+                });
+                saveConfig();
+                
+                console.log('通话总结完成:', summary);
+                showNotification('通话总结完成', 2000, 'success');
+            }
+
+        } catch (error) {
+            console.error('通话总结失败:', error);
+            showNotification('总结出错', 2000, 'error');
+        }
+    }
+
+    function minimizeVoiceCallScreen() {
+        const screen = document.getElementById('voice-call-screen');
+        const floatWindow = document.getElementById('voice-call-float');
+        
+        screen.classList.add('hidden');
+        if (floatWindow) floatWindow.classList.remove('hidden');
+    }
+
+    function restoreVoiceCallScreen() {
+        const screen = document.getElementById('voice-call-screen');
+        const floatWindow = document.getElementById('voice-call-float');
+        
+        screen.classList.remove('hidden');
+        if (floatWindow) floatWindow.classList.add('hidden');
+    }
+
+    function makeDraggable(element, onClickCallback) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        let isDragging = false;
+        
+        element.onmousedown = dragMouseDown;
+        element.ontouchstart = dragMouseDown;
+        
+        // 移除可能存在的 onclick，防止冲突
+        element.onclick = null;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            // e.preventDefault(); // 允许点击事件
+            
+            isDragging = false;
+
+            if (e.type === 'touchstart') {
+                pos3 = e.touches[0].clientX;
+                pos4 = e.touches[0].clientY;
+            } else {
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+            }
+            
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+            document.ontouchend = closeDragElement;
+            document.ontouchmove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            
+            isDragging = true;
+            
+            let clientX, clientY;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            pos1 = pos3 - clientX;
+            pos2 = pos4 - clientY;
+            pos3 = clientX;
+            pos4 = clientY;
+            
+            let newTop = element.offsetTop - pos2;
+            let newLeft = element.offsetLeft - pos1;
+            
+            // 边界检查
+            const maxX = window.innerWidth - element.offsetWidth;
+            const maxY = window.innerHeight - element.offsetHeight;
+            
+            if (newTop < 0) newTop = 0;
+            if (newTop > maxY) newTop = maxY;
+            if (newLeft < 0) newLeft = 0;
+            if (newLeft > maxX) newLeft = maxX;
+
+            element.style.top = newTop + "px";
+            element.style.left = newLeft + "px";
+            element.style.right = "auto"; // 清除 right 属性
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+            document.ontouchend = null;
+            document.ontouchmove = null;
+            
+            if (!isDragging && onClickCallback) {
+                onClickCallback();
+            }
+        }
+    }
+
+    function handleVoiceCallBgUpload(e, contact) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        compressImage(file, 800, 0.7).then(base64 => {
+            contact.voiceCallBg = base64;
+            document.getElementById('voice-call-bg').style.backgroundImage = `url(${base64})`;
+            saveConfig();
+        }).catch(err => {
+            console.error('图片压缩失败', err);
+        });
+        e.target.value = '';
+    }
+
+    function addVoiceCallMessage(text, role) {
+        const container = document.getElementById('voice-call-content');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `voice-call-msg ${role}`;
+        msgDiv.textContent = text;
+        container.appendChild(msgDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 播放通话音频
+    function playVoiceCallAudio(audioData) {
+        if (!audioData) return;
+        const audio = new Audio(audioData);
+        audio.play().catch(e => console.error('Auto play failed:', e));
+    }
+
+    // 修改 appendMessageToUI 以支持通话界面同步显示
+    const originalAppendMessageToUI = appendMessageToUI;
+    appendMessageToUI = function(text, isUser, type, description, replyTo, msgId) {
+        originalAppendMessageToUI(text, isUser, type, description, replyTo, msgId);
+        
+        // 如果通话界面是打开的，且是当前联系人，同步显示
+        const screen = document.getElementById('voice-call-screen');
+        if (!screen.classList.contains('hidden') && state.currentChatContactId) {
+            // 过滤掉系统消息等
+            if ((type === 'text' || type === 'voice_call_text') && !text.startsWith('[')) {
+                let displayText = text;
+                let audioData = null;
+
+                // 尝试解析 JSON (针对带音频的 AI 回复)
+                try {
+                    const data = JSON.parse(text);
+                    if (data && data.text) {
+                        displayText = data.text;
+                        audioData = data.audio;
+                    }
+                } catch (e) {
+                    // 不是 JSON，保持原样
+                }
+
+                addVoiceCallMessage(displayText, isUser ? 'user' : 'ai');
+
+                // 如果是 AI 消息且有音频，自动播放
+                if (!isUser && audioData) {
+                    playVoiceCallAudio(audioData);
+                }
+            }
+        }
+    };
+
+    async function generateVoiceCallAiReply() {
+        if (!state.currentChatContactId) return;
+        
+        const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+        if (!contact) return;
+
+        const settings = state.aiSettings.url ? state.aiSettings : state.aiSettings2;
+        if (!settings.url || !settings.key) {
+            // alert('请先在设置中配置AI API');
+            return;
+        }
+
+        // UI 显示正在输入... (在通话界面显示状态)
+        const statusEl = document.getElementById('voice-call-status');
+        const originalStatus = statusEl.textContent;
+        statusEl.textContent = '对方正在说话...';
+
+        const history = state.chatHistory[state.currentChatContactId] || [];
+        
+        // 获取当前用户人设信息
+        let userPromptInfo = '';
+        let currentPersona = null;
+        if (contact.userPersonaId) {
+            currentPersona = state.userPersonas.find(p => p.id === contact.userPersonaId);
+        }
+        if (currentPersona) {
+            userPromptInfo = `\n用户(我)的网名：${currentPersona.name || '未命名'}`;
+            if (currentPersona.aiPrompt) {
+                userPromptInfo += `\n用户(我)的人设：${currentPersona.aiPrompt}`;
+            }
+        } else if (state.userProfile) {
+            userPromptInfo = `\n用户(我)的网名：${state.userProfile.name}`;
+        }
+
+        // 获取记忆上下文
+        let memoryContext = '';
+        if (contact.memorySendLimit && contact.memorySendLimit > 0) {
+            const contactMemories = state.memories.filter(m => m.contactId === contact.id);
+            if (contactMemories.length > 0) {
+                const recentMemories = contactMemories.sort((a, b) => b.time - a.time).slice(0, contact.memorySendLimit);
+                recentMemories.reverse();
+                memoryContext += '\n【重要记忆】\n';
+                recentMemories.forEach(m => {
+                    memoryContext += `- ${m.content}\n`;
+                });
+            }
+        }
+
+        // 获取世界书内容
+        let worldbookContext = '';
+        if (state.worldbook && state.worldbook.length > 0) {
+            let activeEntries = state.worldbook.filter(e => e.enabled);
+            if (contact.linkedWbCategories) {
+                activeEntries = activeEntries.filter(e => contact.linkedWbCategories.includes(e.categoryId));
+            }
+            if (activeEntries.length > 0) {
+                worldbookContext += '\n\n世界书信息：\n';
+                activeEntries.forEach(entry => {
+                    let shouldAdd = false;
+                    if (entry.keys && entry.keys.length > 0) {
+                        const historyText = history.map(h => h.content).join('\n');
+                        const match = entry.keys.some(key => historyText.includes(key));
+                        if (match) shouldAdd = true;
+                    } else {
+                        shouldAdd = true;
+                    }
+                    if (shouldAdd) {
+                        worldbookContext += `${entry.content}\n`;
+                    }
+                });
+            }
+        }
+
+        // 处理上下文限制
+        // 默认限制为最近 20 条（语音通话不需要太长历史）
+        let limit = contact.contextLimit && contact.contextLimit > 0 ? contact.contextLimit : 20;
+        let contextMessages = history.slice(-limit);
+
+        // 构建 Prompt
+        let systemPrompt = `你现在扮演 ${contact.name}，正在与用户进行【语音通话】。
+人设：${contact.persona || '无'}
+${userPromptInfo}
+${memoryContext}
+${worldbookContext}
+
+【重要规则】
+1. 你们正在打电话，请使用自然的口语交流。
+2. **绝对不要**包含任何动作描写（如 *点头*、*叹气*、*笑了* 等）。
+3. **绝对不要**包含剧本格式（如 "我："、"用户："）。
+4. 回复必须是**一整段**话，不要分段，不要分条。
+5. 语气要自然、流畅，像真实的人在打电话。
+6. 不要输出任何指令（如 ACTION: ...），除非你想挂断电话。
+7. 如果你想挂断电话，请在回复的最后另起一行输出：ACTION: HANGUP_CALL
+8. 仅仅输出你要说的话（和可能的挂断指令）。
+
+请回复对方。`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...contextMessages.map(h => {
+                // 过滤掉非文本内容，或者做简单转换
+                let content = h.content;
+                try {
+                    // 尝试解析 JSON (如果是之前的 voice_call_text)
+                    const data = JSON.parse(content);
+                    if (data.text) content = data.text;
+                } catch(e) {}
+
+                if (h.type === 'image') content = '[图片]';
+                else if (h.type === 'sticker') content = '[表情包]';
+                else if (h.type === 'voice') content = '[语音]';
+                
+                return { role: h.role, content: content };
+            })
+        ];
+
+        try {
+            let fetchUrl = settings.url;
+            if (!fetchUrl.endsWith('/chat/completions')) {
+                fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'chat/completions' : fetchUrl + '/chat/completions';
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${settings.key}`
+                },
+                body: JSON.stringify({
+                    model: settings.model,
+                    messages: messages,
+                    temperature: settings.temperature
+                })
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            const data = await response.json();
+            let replyContent = data.choices[0].message.content.trim();
+
+            // 移除思维链
+            replyContent = replyContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+                                       .replace(/<think>[\s\S]*?<\/think>/g, '')
+                                       .trim();
+
+            // 1. 先检查并移除挂断指令，确保 TTS 不会读出来
+            let shouldHangup = false;
+            if (replyContent.includes('ACTION: HANGUP_CALL')) {
+                shouldHangup = true;
+                replyContent = replyContent.replace('ACTION: HANGUP_CALL', '').trim();
+            }
+
+            // 2. 生成语音 (使用清理后的文本)
+            let audioData = null;
+            // 检查扬声器状态
+            const speakerBtn = document.getElementById('voice-call-speaker-btn');
+            const isSpeakerOn = speakerBtn && speakerBtn.classList.contains('active');
+
+            if (isSpeakerOn && replyContent) {
+                statusEl.textContent = '正在生成语音...';
+                audioData = await generateMinimaxTTS(replyContent, contact.ttsVoiceId);
+            }
+
+            // 3. 发送消息
+            const msgPayload = {
+                text: replyContent,
+                audio: audioData
+            };
+            
+            sendMessage(JSON.stringify(msgPayload), false, 'voice_call_text');
+
+            // 4. 如果 AI 决定挂断
+            if (shouldHangup) {
+                // 估算语音时长，如果没有音频则给个默认值
+                // 简单估算：中文每秒 3-4 字
+                const delay = audioData ? (replyContent.length * 300 + 1000) : 2000;
+                
+                setTimeout(() => {
+                    // 调用统一的关闭函数，传入 'ai' 表示 AI 挂断
+                    closeVoiceCallScreen('ai');
+                }, delay); 
+            }
+
+        } catch (error) {
+            console.error('语音通话AI生成失败:', error);
+            addVoiceCallMessage('[生成失败]', 'ai');
+        } finally {
+            statusEl.textContent = originalStatus;
+        }
+    }
+
     // --- 见面功能逻辑 ---
     // ============================================================
     // 见面功能核心逻辑 (Meeting System)
@@ -11124,55 +12125,318 @@ function resetMeetingFontAction() {
     alert('见面字体已重置为跟随系统');
 }
 
-// 5. 播放语音消息 (全局函数)
-window.playVoiceMsg = function(msgId, textElId, event) {
-    if (event) event.stopPropagation();
-    
-    const textEl = document.getElementById(textElId);
-    if (textEl) textEl.classList.remove('hidden');
+    // 全局变量用于跟踪播放状态
+    let currentVoiceAudio = null;
+    let currentVoiceMsgId = null;
+    let currentVoiceIcon = null;
 
-    // 查找消息
-    let targetMsg = null;
-    if (state.currentChatContactId && state.chatHistory[state.currentChatContactId]) {
-        targetMsg = state.chatHistory[state.currentChatContactId].find(m => m.id == msgId);
+    // 语音通话 VAD 功能实现
+    async function startVoiceCallVAD() {
+        if (voiceCallIsRecording) return;
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceCallAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            voiceCallAnalyser = voiceCallAudioContext.createAnalyser();
+            voiceCallMicrophone = voiceCallAudioContext.createMediaStreamSource(stream);
+            voiceCallScriptProcessor = voiceCallAudioContext.createScriptProcessor(2048, 1, 1);
+
+            voiceCallAnalyser.fftSize = 512;
+            voiceCallMicrophone.connect(voiceCallAnalyser);
+            voiceCallAnalyser.connect(voiceCallScriptProcessor);
+            voiceCallScriptProcessor.connect(voiceCallAudioContext.destination);
+
+            voiceCallMediaRecorder = new MediaRecorder(stream);
+            voiceCallChunks = [];
+
+            voiceCallMediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    voiceCallChunks.push(e.data);
+                }
+            };
+
+            voiceCallMediaRecorder.onstop = async () => {
+                if (voiceCallChunks.length > 0) {
+                    const audioBlob = new Blob(voiceCallChunks, { type: 'audio/webm' });
+                    await processVoiceCallAudio(audioBlob);
+                    voiceCallChunks = [];
+                }
+            };
+
+            voiceCallIsSpeaking = false;
+            voiceCallSilenceStart = Date.now();
+            voiceCallIsRecording = true;
+
+            // VAD 参数
+            const VAD_THRESHOLD = 15; // 音量阈值 (0-255)
+            const SILENCE_DURATION = 1500; // 静音持续时间 (ms) 触发发送
+
+            voiceCallScriptProcessor.onaudioprocess = (event) => {
+                const array = new Uint8Array(voiceCallAnalyser.frequencyBinCount);
+                voiceCallAnalyser.getByteFrequencyData(array);
+                let values = 0;
+                const length = array.length;
+                for (let i = 0; i < length; i++) {
+                    values += array[i];
+                }
+                const average = values / length;
+
+                // 更新状态显示
+                const statusEl = document.getElementById('voice-call-status');
+                
+                if (average > VAD_THRESHOLD) {
+                    // 检测到声音
+                    if (!voiceCallIsSpeaking) {
+                        console.log('VAD: Speaking started');
+                        voiceCallIsSpeaking = true;
+                        if (voiceCallMediaRecorder.state === 'inactive') {
+                            voiceCallMediaRecorder.start();
+                            if (statusEl) statusEl.textContent = '正在聆听...';
+                        }
+                    }
+                    voiceCallSilenceStart = Date.now(); // 重置静音计时
+                } else {
+                    // 静音
+                    if (voiceCallIsSpeaking) {
+                        const silenceDuration = Date.now() - voiceCallSilenceStart;
+                        if (silenceDuration > SILENCE_DURATION) {
+                            console.log('VAD: Speaking ended');
+                            voiceCallIsSpeaking = false;
+                            if (voiceCallMediaRecorder.state === 'recording') {
+                                voiceCallMediaRecorder.stop();
+                                if (statusEl) statusEl.textContent = '正在处理...';
+                            }
+                        }
+                    }
+                }
+            };
+
+            console.log('Voice Call VAD started');
+
+        } catch (error) {
+            console.error('Failed to start VAD:', error);
+            alert('无法启动语音检测，请检查麦克风权限');
+            stopVoiceCallVAD();
+        }
     }
 
-    if (!targetMsg) {
-        console.error('Message not found:', msgId);
-        return;
+    function stopVoiceCallVAD() {
+        if (!voiceCallIsRecording) return;
+
+        if (voiceCallMediaRecorder && voiceCallMediaRecorder.state !== 'inactive') {
+            voiceCallMediaRecorder.stop();
+        }
+        
+        if (voiceCallMicrophone) voiceCallMicrophone.disconnect();
+        if (voiceCallAnalyser) voiceCallAnalyser.disconnect();
+        if (voiceCallScriptProcessor) {
+            voiceCallScriptProcessor.disconnect();
+            voiceCallScriptProcessor.onaudioprocess = null;
+        }
+        if (voiceCallAudioContext) voiceCallAudioContext.close();
+
+        voiceCallIsRecording = false;
+        voiceCallIsSpeaking = false;
+        voiceCallChunks = [];
+        
+        // 更新 UI
+        const micBtn = document.getElementById('voice-call-mic-btn');
+        if (micBtn) {
+            micBtn.classList.remove('active');
+            const span = micBtn.nextElementSibling;
+            if (span) span.textContent = '麦克风已关';
+        }
+        
+        const statusEl = document.getElementById('voice-call-status');
+        if (statusEl) statusEl.textContent = '通话中';
+
+        console.log('Voice Call VAD stopped');
     }
 
-    let audioData = null;
-    try {
-        // 消息内容可能是 JSON 字符串
-        const data = typeof targetMsg.content === 'string' ? JSON.parse(targetMsg.content) : targetMsg.content;
-        audioData = data.audio;
-    } catch (e) {
-        console.error('Parse error', e);
+    async function processVoiceCallAudio(audioBlob) {
+        if (!state.whisperSettings.url || !state.whisperSettings.key) {
+            console.warn('Whisper API not configured');
+            return;
+        }
+
+        const statusEl = document.getElementById('voice-call-status');
+        if (statusEl) statusEl.textContent = '正在转文字...';
+
+        try {
+            const audioFile = new File([audioBlob], "voice_call.webm", { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('model', state.whisperSettings.model || 'whisper-1');
+
+            let fetchUrl = state.whisperSettings.url;
+            if (!fetchUrl.endsWith('/audio/transcriptions')) {
+                fetchUrl = fetchUrl.endsWith('/') ? fetchUrl + 'audio/transcriptions' : fetchUrl + '/audio/transcriptions';
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.whisperSettings.key}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            const data = await response.json();
+            const text = data.text ? data.text.trim() : '';
+
+            if (text) {
+                console.log('VAD Recognized:', text);
+                // 发送识别出的文本
+                sendMessage(text, true, 'voice_call_text');
+                // 触发 AI 回复
+                generateVoiceCallAiReply();
+            } else {
+                console.log('VAD: No text recognized');
+            }
+
+        } catch (error) {
+            console.error('Voice Call STT Error:', error);
+        } finally {
+            if (statusEl) statusEl.textContent = '正在聆听...'; // 恢复聆听状态
+        }
     }
 
-    if (audioData) {
-        const audio = new Audio(audioData);
+    // 5. 播放语音消息 (全局函数)
+    window.playVoiceMsg = async function(msgId, textElId, event) {
+        if (event) event.stopPropagation();
+
         const btn = event.currentTarget;
         const icon = btn.querySelector('i');
+
+        // 防止重复点击同一条正在播放的消息
+        if (currentVoiceMsgId === msgId && currentVoiceAudio && !currentVoiceAudio.paused) {
+            return;
+        }
+
+        // 防止在加载时重复点击
+        if (icon && icon.classList.contains('fa-spinner')) {
+            return;
+        }
+
+        // 如果有其他消息正在播放，停止它
+        if (currentVoiceAudio) {
+            currentVoiceAudio.pause();
+            currentVoiceAudio = null;
+            currentVoiceMsgId = null;
+            if (currentVoiceIcon) {
+                currentVoiceIcon.className = 'fas fa-rss'; // 重置旧图标
+                currentVoiceIcon = null;
+            }
+        }
         
-        if (icon) icon.classList.add('voice-playing-anim');
-        
-        audio.onended = () => {
-            if (icon) icon.classList.remove('voice-playing-anim');
-        };
-        
-        audio.onerror = (e) => {
-            console.error('Audio play error', e);
-            if (icon) icon.classList.remove('voice-playing-anim');
-            // alert('无法播放音频'); // 避免打扰用户
-        };
-        
-        audio.play().catch(err => {
-            console.error('Play error:', err);
-            if (icon) icon.classList.remove('voice-playing-anim');
-        });
-    }
-};
+        const textEl = document.getElementById(textElId);
+        if (textEl) textEl.classList.remove('hidden');
+
+        // 查找消息
+        let targetMsg = null;
+        if (state.currentChatContactId && state.chatHistory[state.currentChatContactId]) {
+            targetMsg = state.chatHistory[state.currentChatContactId].find(m => m.id == msgId);
+        }
+
+        if (!targetMsg) {
+            console.error('Message not found:', msgId);
+            return;
+        }
+
+        let msgData = null;
+        try {
+            msgData = typeof targetMsg.content === 'string' ? JSON.parse(targetMsg.content) : targetMsg.content;
+        } catch (e) {
+            console.error('Parse error', e);
+            return;
+        }
+
+        // 如果没有音频数据，尝试生成
+        if (!msgData.audio && !msgData.isReal) {
+            // 获取联系人配置
+            const contact = state.contacts.find(c => c.id === state.currentChatContactId);
+            if (!contact || !contact.ttsEnabled) {
+                alert('无法播放：未启用TTS或联系人不存在');
+                return;
+            }
+
+            // 显示加载状态
+            if (icon) {
+                icon.className = 'fas fa-spinner fa-spin'; // 临时改为加载图标
+            }
+
+            try {
+                const audioData = await generateMinimaxTTS(msgData.text, contact.ttsVoiceId);
+                if (audioData) {
+                    msgData.audio = audioData;
+                    // 更新消息内容
+                    targetMsg.content = JSON.stringify(msgData);
+                    saveConfig();
+                } else {
+                    alert('语音生成失败，请检查API配置');
+                    if (icon) icon.className = 'fas fa-rss'; // 恢复图标
+                    return;
+                }
+            } catch (e) {
+                console.error('TTS generation error:', e);
+                alert('语音生成出错');
+                if (icon) icon.className = 'fas fa-rss';
+                return;
+            }
+        }
+
+        // 播放音频
+        if (msgData.audio) {
+            const audio = new Audio(msgData.audio);
+            currentVoiceAudio = audio;
+            currentVoiceMsgId = msgId;
+            
+            if (icon) {
+                icon.className = 'fas fa-rss voice-playing-anim'; // 确保包含动画类
+                currentVoiceIcon = icon;
+            }
+            
+            audio.onended = () => {
+                if (icon) {
+                    icon.className = 'fas fa-rss'; // 移除动画
+                }
+                // 清除全局状态
+                if (currentVoiceMsgId === msgId) {
+                    currentVoiceAudio = null;
+                    currentVoiceMsgId = null;
+                    currentVoiceIcon = null;
+                }
+            };
+            
+            audio.onerror = (e) => {
+                console.error('Audio play error', e);
+                if (icon) icon.className = 'fas fa-rss';
+                alert('播放失败：音频数据可能已损坏或格式不支持');
+                // 清除全局状态
+                if (currentVoiceMsgId === msgId) {
+                    currentVoiceAudio = null;
+                    currentVoiceMsgId = null;
+                    currentVoiceIcon = null;
+                }
+            };
+            
+            audio.play().catch(err => {
+                console.error('Play error:', err);
+                if (icon) icon.className = 'fas fa-rss';
+                alert('播放错误：' + err.message);
+                // 清除全局状态
+                if (currentVoiceMsgId === msgId) {
+                    currentVoiceAudio = null;
+                    currentVoiceMsgId = null;
+                    currentVoiceIcon = null;
+                }
+            });
+        } else {
+            if (icon) icon.className = 'fas fa-rss';
+            alert('该消息没有音频数据。');
+        }
+    };
 
 });
