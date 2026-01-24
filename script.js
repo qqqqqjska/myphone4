@@ -972,14 +972,29 @@ let currentEditingChatMsgId = null;
         const chatMorePanel = document.getElementById('chat-more-panel');
         const stickerBtn = document.getElementById('sticker-btn');
         const stickerPanel = document.getElementById('sticker-panel');
+        const chatInputArea = document.querySelector('.chat-input-area');
         
+        // 辅助函数：关闭所有面板
+        function closeAllPanels() {
+            if (chatMorePanel) chatMorePanel.classList.remove('slide-in');
+            if (stickerPanel) stickerPanel.classList.remove('slide-in');
+            if (chatInputArea) chatInputArea.classList.remove('push-up');
+        }
+
         if (chatMoreBtn && chatMorePanel) {
             chatMoreBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                chatMorePanel.classList.toggle('hidden');
-                // 确保表情包面板关闭
-                if (stickerPanel) stickerPanel.classList.add('hidden');
-                scrollToBottom();
+                
+                // 如果当前已打开，则关闭
+                if (chatMorePanel.classList.contains('slide-in')) {
+                    closeAllPanels();
+                } else {
+                    // 打开更多，关闭表情
+                    if (stickerPanel) stickerPanel.classList.remove('slide-in');
+                    chatMorePanel.classList.add('slide-in');
+                    if (chatInputArea) chatInputArea.classList.add('push-up');
+                    scrollToBottom();
+                }
             });
 
             // 点击面板内的项目
@@ -991,7 +1006,7 @@ let currentEditingChatMsgId = null;
                     e.stopPropagation();
                     const label = item.querySelector('.more-label').textContent;
                     alert(`功能 "${label}" 开发中...`);
-                    chatMorePanel.classList.add('hidden');
+                    closeAllPanels();
                 });
             });
         }
@@ -1151,24 +1166,33 @@ let currentEditingChatMsgId = null;
 
         // 点击其他地方关闭面板
         document.addEventListener('click', (e) => {
-            if (chatMorePanel && !chatMorePanel.classList.contains('hidden') && 
+            const chatInputArea = document.querySelector('.chat-input-area');
+            
+            // 检查更多面板
+            if (chatMorePanel && chatMorePanel.classList.contains('slide-in') && 
                 !chatMorePanel.contains(e.target) && 
                 !chatMoreBtn.contains(e.target)) {
-                chatMorePanel.classList.add('hidden');
+                chatMorePanel.classList.remove('slide-in');
+                if (chatInputArea) chatInputArea.classList.remove('push-up');
             }
             
-            if (stickerPanel && !stickerPanel.classList.contains('hidden') && 
+            // 检查表情面板
+            const currentStickerBtn = document.getElementById('sticker-btn');
+            if (stickerPanel && stickerPanel.classList.contains('slide-in') && 
                 !stickerPanel.contains(e.target) && 
-                (stickerBtn ? !stickerBtn.contains(e.target) : true)) {
-                stickerPanel.classList.add('hidden');
+                (currentStickerBtn ? !currentStickerBtn.contains(e.target) : true)) {
+                stickerPanel.classList.remove('slide-in');
+                if (chatInputArea) chatInputArea.classList.remove('push-up');
             }
         });
 
         // 输入框聚焦时关闭面板
         if (chatInput) {
             chatInput.addEventListener('focus', () => {
-                if (chatMorePanel) chatMorePanel.classList.add('hidden');
-                if (stickerPanel) stickerPanel.classList.add('hidden');
+                const chatInputArea = document.querySelector('.chat-input-area');
+                if (chatMorePanel) chatMorePanel.classList.remove('slide-in');
+                if (stickerPanel) stickerPanel.classList.remove('slide-in');
+                if (chatInputArea) chatInputArea.classList.remove('push-up');
             });
         }
 
@@ -9284,19 +9308,30 @@ if (resetFontBtn) {
     function toggleStickerPanel() {
         const panel = document.getElementById('sticker-panel');
         const chatMorePanel = document.getElementById('chat-more-panel');
+        const chatInputArea = document.querySelector('.chat-input-area');
         
-        if (panel.classList.contains('hidden')) {
-            panel.classList.remove('hidden');
-            if (chatMorePanel) chatMorePanel.classList.add('hidden');
-            scrollToBottom();
-            renderStickerTabs();
-            renderStickerList();
-        } else {
-            panel.classList.add('hidden');
+        if (panel.classList.contains('slide-in')) {
+            // 关闭
+            panel.classList.remove('slide-in');
+            if (chatInputArea) chatInputArea.classList.remove('push-up');
+            
             // 退出管理模式
             if (state.isStickerManageMode) {
                 toggleStickerManageMode();
             }
+        } else {
+            // 打开
+            panel.classList.remove('hidden'); // 确保移除 hidden
+            panel.classList.add('slide-in');
+            
+            // 关闭更多面板
+            if (chatMorePanel) chatMorePanel.classList.remove('slide-in');
+            
+            if (chatInputArea) chatInputArea.classList.add('push-up');
+            
+            scrollToBottom();
+            renderStickerTabs();
+            renderStickerList();
         }
     }
 
@@ -9494,7 +9529,13 @@ if (resetFontBtn) {
         // 发送表情包作为 sticker 类型，描述作为附加信息
         // 用户端显示为图片，AI端接收为 "[发送了一个表情包：描述]"
         sendMessage(sticker.url, true, 'sticker', sticker.desc);
-        document.getElementById('sticker-panel').classList.add('hidden');
+        
+        // 关闭面板
+        const panel = document.getElementById('sticker-panel');
+        const chatInputArea = document.querySelector('.chat-input-area');
+        
+        if (panel) panel.classList.remove('slide-in');
+        if (chatInputArea) chatInputArea.classList.remove('push-up');
     }
 
     function toggleStickerManageMode() {
@@ -10630,6 +10671,8 @@ refreshButtons.forEach(btnId => {
     let voiceCallSilenceStart = 0;
     let voiceCallVadInterval = null;
     let voiceCallIsRecording = false;
+    let voiceCallStream = null; // 新增：存储通话麦克风流
+    let globalVoicePlayer = null; // 新增：全局语音播放器
 
     // 3. 切换录音状态 (使用 MediaRecorder + Whisper API)
     async function toggleVoiceRecording() {
@@ -10820,6 +10863,16 @@ refreshButtons.forEach(btnId => {
         
         // 显示界面
         screen.classList.remove('hidden');
+
+        // --- 移动端音频解锁 ---
+        if (!globalVoicePlayer) {
+            globalVoicePlayer = new Audio();
+        }
+        // 播放一段极短的静音音频来解锁自动播放
+        // 这是一个 0.1秒的静音 WAV
+        globalVoicePlayer.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAgAAAAEA';
+        globalVoicePlayer.play().catch(e => console.log('Audio unlock failed (harmless if not on mobile):', e));
+        // --------------------
 
         // 开始计时
         if (voiceCallTimer) clearInterval(voiceCallTimer);
@@ -11163,8 +11216,14 @@ refreshButtons.forEach(btnId => {
     // 播放通话音频
     function playVoiceCallAudio(audioData) {
         if (!audioData) return;
-        const audio = new Audio(audioData);
-        audio.play().catch(e => console.error('Auto play failed:', e));
+        
+        // 复用全局播放器以支持移动端连续播放
+        if (!globalVoicePlayer) {
+            globalVoicePlayer = new Audio();
+        }
+        
+        globalVoicePlayer.src = audioData;
+        globalVoicePlayer.play().catch(e => console.error('Auto play failed:', e));
     }
 
     // 修改 appendMessageToUI 以支持通话界面同步显示
@@ -12136,6 +12195,7 @@ function resetMeetingFontAction() {
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceCallStream = stream; // 保存流引用
             voiceCallAudioContext = new (window.AudioContext || window.webkitAudioContext)();
             voiceCallAnalyser = voiceCallAudioContext.createAnalyser();
             voiceCallMicrophone = voiceCallAudioContext.createMediaStreamSource(stream);
@@ -12225,6 +12285,12 @@ function resetMeetingFontAction() {
 
         if (voiceCallMediaRecorder && voiceCallMediaRecorder.state !== 'inactive') {
             voiceCallMediaRecorder.stop();
+        }
+        
+        // 停止所有麦克风轨道
+        if (voiceCallStream) {
+            voiceCallStream.getTracks().forEach(track => track.stop());
+            voiceCallStream = null;
         }
         
         if (voiceCallMicrophone) voiceCallMicrophone.disconnect();
