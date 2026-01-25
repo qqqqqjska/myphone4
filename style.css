@@ -3124,6 +3124,37 @@ input:checked + .slider:before {
     display: block; /* 消除底部间隙 */
 }
 
+/* Description Message Style (Third Person) */
+.message-content.description-msg {
+    background-color: transparent !important;
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+    padding: 5px 0;
+    font-size: 14px;
+    font-style: italic;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.chat-message.description-row {
+    justify-content: center;
+    flex-direction: row !important;
+    margin-bottom: 5px;
+}
+
+.chat-message.description-row .chat-avatar,
+.chat-message.description-row .msg-time {
+    display: none;
+}
+
+.chat-message.description-row .msg-wrapper {
+    max-width: 90%;
+    align-items: center;
+}
+
 /* Context Menu */
 .context-menu {
     position: absolute;
@@ -4707,6 +4738,20 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
     align-self: flex-start;
 }
 
+.voice-call-msg.description {
+    background-color: transparent;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    align-self: center;
+    text-align: center;
+    font-style: italic;
+    width: 100%;
+    max-width: 100%;
+    backdrop-filter: none;
+    box-shadow: none;
+    padding: 5px 0;
+}
+
 .voice-call-input-area {
     position: absolute;
     bottom: 150px; /* 上移一点 */
@@ -4717,7 +4762,7 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
     z-index: 10;
 }
 
-#voice-call-input {
+#voice-call-input, #video-call-input {
     flex: 1;
     height: 40px;
     border-radius: 20px;
@@ -4730,11 +4775,11 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
     outline: none;
 }
 
-#voice-call-input::placeholder {
+#voice-call-input::placeholder, #video-call-input::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
 
-#voice-call-send-btn {
+#voice-call-send-btn, #video-call-send-btn, #video-call-snapshot-btn {
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -4755,10 +4800,20 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
     left: 0;
     width: 100%;
     display: flex;
+    justify-content: center; /* 改为居中，让内部 row 控制分布 */
+    align-items: flex-end;
+    padding: 0; /* 移除 padding，由 row 控制 */
+    z-index: 20; /* 提高层级 */
+    pointer-events: none; /* 容器不阻挡，子元素开启 */
+}
+
+.voice-call-actions-row {
+    display: flex;
     justify-content: space-around;
-    align-items: flex-start;
+    width: 100%;
+    align-items: center;
     padding: 0 30px;
-    z-index: 10;
+    pointer-events: auto; /* 恢复点击 */
 }
 
 .voice-call-action-item {
@@ -4823,4 +4878,92 @@ html body .chat-message.user .voice-icon-box i { transform: rotate(-90deg); }
 .voice-action-btn.dark.active {
     background-color: #fff;
     color: #333;
+}
+
+/* Video Call Styles */
+.video-call-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+}
+
+.video-local-preview {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 120px;
+    height: 160px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.2);
+}
+
+#video-local-stream {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* 镜像 */
+}
+
+/* 自动截图设置弹窗样式 */
+#auto-snapshot-modal .modal-content {
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: auto;
+    animation: fadeIn 0.2s ease-out;
+}
+
+#auto-snapshot-modal .modal-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#auto-snapshot-modal .modal-header h3 {
+    color: #fff;
+}
+
+#auto-snapshot-modal .close-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+#auto-snapshot-modal .setting-group label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#auto-snapshot-modal .setting-group input {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+#auto-snapshot-modal .setting-group input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#auto-snapshot-modal .ios-btn-block {
+    background-color: #fff;
+    color: #000;
+}
+
+/* 调整本地视频预览位置，避免遮挡右上角按钮 */
+.video-local-preview {
+    top: 100px; /* 下移 */
+    border: none; /* 去掉边框 */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }

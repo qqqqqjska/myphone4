@@ -673,6 +673,13 @@
                                     <label for="chat-setting-bg" class="ios-btn">选择图片</label>
                                 </div>
                             </div>
+                            <div class="list-item">
+                                <div class="list-content column">
+                                    <label>视频通话背景</label>
+                                    <input type="file" id="chat-setting-video-bg" accept="image/*" class="file-input-hidden">
+                                    <label for="chat-setting-video-bg" class="ios-btn">选择图片</label>
+                                </div>
+                            </div>
                             <div class="list-item no-padding">
                                 <div id="chat-bg-gallery" class="gallery-scroll">
                                     <!-- 壁纸缩略图将在这里生成 -->
@@ -1204,25 +1211,147 @@
 
             <!-- 底部控制栏 -->
             <div class="voice-call-footer">
-                <div class="voice-call-action-item">
-                    <button id="voice-call-mic-btn" class="voice-action-btn white active">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <span>麦克风已开</span>
-                </div>
-                
-                <div class="voice-call-action-item">
-                    <button id="voice-call-hangup-btn" class="voice-action-btn red">
-                        <i class="fas fa-phone-slash"></i>
-                    </button>
-                    <span>挂断</span>
+                <!-- 通话中按钮组 -->
+                <div id="voice-call-actions-active" class="voice-call-actions-row">
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-mic-btn" class="voice-action-btn white active">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <span>麦克风已开</span>
+                    </div>
+                    
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-hangup-btn" class="voice-action-btn red">
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                        <span>挂断</span>
+                    </div>
+
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-speaker-btn" class="voice-action-btn dark">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <span>扬声器已关</span>
+                    </div>
                 </div>
 
-                <div class="voice-call-action-item">
-                    <button id="voice-call-speaker-btn" class="voice-action-btn dark">
-                        <i class="fas fa-volume-up"></i>
-                    </button>
-                    <span>扬声器已关</span>
+                <!-- 来电按钮组 -->
+                <div id="voice-call-actions-incoming" class="voice-call-actions-row hidden" style="justify-content: space-around; width: 100%; padding: 0 40px;">
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-reject-btn" class="voice-action-btn red" style="width: 70px; height: 70px;">
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                        <span>挂断</span>
+                    </div>
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-accept-btn" class="voice-action-btn green" style="width: 70px; height: 70px; background-color: #34C759; color: #fff;">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <span>接通</span>
+                    </div>
+                </div>
+
+                <!-- 呼出按钮组 (新增) -->
+                <div id="voice-call-actions-outgoing" class="voice-call-actions-row hidden" style="justify-content: center; width: 100%;">
+                    <div class="voice-call-action-item">
+                        <button id="voice-call-cancel-btn" class="voice-action-btn red" style="width: 70px; height: 70px;">
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                        <span>取消</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视频通话全屏页 -->
+        <div id="video-call-screen" class="app-screen hidden" style="z-index: 300; background-color: #000;">
+            <!-- 背景层 -->
+            <div id="video-call-bg" class="video-call-bg"></div>
+            
+            <!-- 隐藏的文件输入框，用于更换视频通话背景 -->
+            <input type="file" id="video-call-bg-input" accept="image/*" class="file-input-hidden">
+
+            <!-- 顶部控制栏 -->
+            <div class="voice-call-header">
+                <button id="video-call-minimize-btn" class="icon-btn-white"><i class="fas fa-compress-alt"></i></button>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="voice-call-time" id="video-call-time">00:00</div>
+                    <div id="video-call-status" class="voice-call-status" style="font-size: 12px; opacity: 0.8;">正在通话中...</div>
+                </div>
+                <button id="video-call-add-btn" class="icon-btn-white"><i class="fas fa-plus"></i></button>
+            </div>
+
+            <!-- 右上角本地摄像头预览 -->
+            <div id="video-local-preview" class="video-local-preview hidden">
+                <video id="video-local-stream" autoplay playsinline muted></video>
+            </div>
+
+            <!-- 对话显示区域 -->
+            <div class="voice-call-content-container" id="video-call-content">
+                <!-- 对话内容将通过JS动态插入 -->
+            </div>
+
+            <!-- 底部输入框 -->
+            <div class="voice-call-input-area">
+                <input type="text" id="video-call-input" placeholder="发送消息...">
+                <button id="video-call-snapshot-btn"><i class="fas fa-camera"></i></button>
+                <button id="video-call-send-btn"><i class="fas fa-arrow-up"></i></button>
+            </div>
+
+            <!-- 自动截图设置弹窗 -->
+            <div id="auto-snapshot-modal" class="modal hidden" style="z-index: 310;">
+                <div class="modal-content" style="width: 80%; max-width: 300px;">
+                    <div class="modal-header">
+                        <h3>自动截图设置</h3>
+                        <button class="close-btn" id="close-auto-snapshot">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>截图间隔 (秒)</label>
+                            <input type="number" id="auto-snapshot-interval" placeholder="输入秒数，0为关闭" min="5">
+                        </div>
+                        <div style="font-size: 12px; color: #888; margin-bottom: 15px;">
+                            开启后，将按指定间隔自动截取视频画面并发送给AI进行分析。建议间隔不低于5秒。
+                        </div>
+                        <button id="save-auto-snapshot-btn" class="ios-btn-block">保存并生效</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部控制栏 -->
+            <div class="voice-call-footer">
+                <div class="voice-call-actions-row" style="justify-content: space-evenly; width: 100%;">
+                    <!-- 麦克风 -->
+                    <div class="voice-call-action-item">
+                        <button id="video-call-mic-btn" class="voice-action-btn white active">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <span>麦克风已开</span>
+                    </div>
+                    
+                    <!-- 挂断 -->
+                    <div class="voice-call-action-item">
+                        <button id="video-call-hangup-btn" class="voice-action-btn red">
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                        <span>挂断</span>
+                    </div>
+
+                    <!-- 开启摄像头 -->
+                    <div class="voice-call-action-item">
+                        <button id="video-call-camera-btn" class="voice-action-btn white">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <span>摄像头已关</span>
+                    </div>
+
+                    <!-- 扬声器 -->
+                    <div class="voice-call-action-item">
+                        <button id="video-call-speaker-btn" class="voice-action-btn dark">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <span>扬声器已关</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1788,7 +1917,7 @@
                         </div>
 
                         <!-- 消息区域 (复用 chat-body 类) -->
-                        <div id="preview-messages" class="chat-body" style="flex: 1; overflow-y: auto; padding-top: 91px; padding-bottom: 60px; background-color: #f2f2f7;">
+                        <div id="preview-messages" class="chat-body" style="flex: 1; overflow-y: auto; padding-top: 110px; padding-bottom: 60px; background-color: #f2f2f7;">
                             <!-- AI 消息 1 -->
                             <div id="preview-ai-row" class="chat-message other">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="chat-avatar">
@@ -2032,7 +2161,7 @@
                         <span>生成的 CSS 代码</span>
                         <button id="copy-css-btn" style="background: none; border: none; color: #61afef; cursor: pointer; font-size: 12px;">复制</button>
                     </div>
-                    <textarea id="css-output" readonly style="flex: 1; background: transparent; border: none; color: #98c379; font-family: monospace; font-size: 12px; resize: none; outline: none;"></textarea>
+                    <textarea id="css-output" style="flex: 1; background: transparent; border: none; color: #98c379; font-family: monospace; font-size: 12px; resize: none; outline: none;"></textarea>
                 </div>
             </div>
         </div>
@@ -2328,7 +2457,13 @@
 
     <!-- 引入 localForage 用于存储大文件 (可选，如果需要) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script src="script.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/worldbook.js"></script>
+    <script src="js/meeting.js"></script>
+    <script src="js/apps.js"></script>
+    <script src="js/home.js"></script>
+    <script src="js/chat.js"></script>
 
 <!-- 在 index.html 中找到 <!-- 编辑记忆弹窗 --> 附近，添加以下代码 -->
 
